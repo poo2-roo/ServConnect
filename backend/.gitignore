@@ -2,7 +2,7 @@
 Configuration Django pour le projet ServConnect.
 
 Plateforme intelligente de géolocalisation et de mise en relation
-de prestataires de services (Cameroun) — Tech Temple / IAI-Cameroun.
+de prestataires de services (Cameroun).
 """
 
 from pathlib import Path
