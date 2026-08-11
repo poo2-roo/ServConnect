@@ -1,0 +1,14 @@
+{
+    "type": "Feature",
+    "geometry": {
+        "type": "Point",
+        "coordinates": [9.7043, 4.0511]
+    },
+    "properties": {
+        "nom_structure": "Atelier Jean Plomberie",
+        "type_structure": "atelier",
+        "adresse_texte": "Derriere la pharmacie Akwa, non loin du carrefour",
+        "quartier": "Akwa",
+        "ville": "douala"
+    }
+}

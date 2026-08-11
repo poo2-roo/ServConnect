@@ -1,0 +1,25 @@
+from django.urls import path
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+from .views import (
+    ClientDetailView,
+    InscriptionView,
+    PrestataireDetailView,
+    PrestataireKYCUploadView,
+    PrestataireKYCVerifierView,
+    PrestataireListView,
+    ProfilView,
+)
+
+urlpatterns = [
+    path('inscription/', InscriptionView.as_view(), name='inscription'),
+    path('connexion/', TokenObtainPairView.as_view(), name='connexion'),
+    path('connexion/rafraichir/', TokenRefreshView.as_view(), name='connexion-rafraichir'),
+
+    path('moi/', ProfilView.as_view(), name='profil'),
+    path('clients/<int:pk>/', ClientDetailView.as_view(), name='client-detail'),
+    path('prestataires/', PrestataireListView.as_view(), name='prestataire-list'),
+    path('prestataires/<int:pk>/', PrestataireDetailView.as_view(), name='prestataire-detail'),
+    path('moi/kyc/', PrestataireKYCUploadView.as_view(), name='prestataire-kyc-upload'),
+    path('moi/kyc/verifier/', PrestataireKYCVerifierView.as_view(), name='prestataire-kyc-verifier'),
+]
