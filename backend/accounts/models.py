@@ -85,6 +85,10 @@ class Prestataire(models.Model):
     # Module IA #2 — KYC via analyse de pièce d'identité (Smile Identity)
     piece_identite_recto = models.ImageField(upload_to='kyc/', blank=True, null=True)
     piece_identite_verso = models.ImageField(upload_to='kyc/', blank=True, null=True)
+    selfie_avec_piece = models.ImageField(
+        upload_to='kyc/', blank=True, null=True,
+        help_text="Photo du visage du prestataire tenant sa pièce d'identité.",
+    )
     statut_kyc = models.CharField(
         max_length=20, choices=StatutKYC.choices, default=StatutKYC.NON_SOUMIS
     )

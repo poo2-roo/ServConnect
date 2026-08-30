@@ -18,12 +18,15 @@ class ErreurAppelIA(Exception):
 def appeler_gemini(
     prompt, module, utilisateur=None, reponse_json=False, modele=MODELE_PAR_DEFAUT,
     image_bytes=None, image_mime_type='image/jpeg',
+    images=None,
     audio_bytes=None, audio_mime_type='audio/mp3',
 ):
     """
-    Appelle Gemini avec un prompt texte, et optionnellement une image OU un
-    fichier audio (modules multimodaux : KYC pour l'image, chatbot vocal
-    pour l'audio). Journalise l'appel dans JournalAppelIA.
+    Appelle Gemini avec un prompt texte, et optionnellement :
+    - une seule image (image_bytes) — usage historique (NLP, KYC simple)
+    - plusieurs images (images = liste de tuples (bytes, mime_type)) — ex: KYC avec selfie
+    - un fichier audio (chatbot vocal)
+    Journalise l'appel dans JournalAppelIA.
     """
 
     config_generation = {}
@@ -33,6 +36,9 @@ def appeler_gemini(
     contenu = [prompt]
     if image_bytes is not None:
         contenu.append({'mime_type': image_mime_type, 'data': image_bytes})
+    if images:
+        for img_bytes, img_mime in images:
+            contenu.append({'mime_type': img_mime, 'data': img_bytes})
     if audio_bytes is not None:
         contenu.append({'mime_type': audio_mime_type, 'data': audio_bytes})
 

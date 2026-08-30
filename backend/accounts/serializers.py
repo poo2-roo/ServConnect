@@ -74,9 +74,10 @@ class PrestataireSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['statut_kyc', 'note_moyenne', 'nombre_avis']
 
+
 class PrestataireKYCUploadSerializer(serializers.ModelSerializer):
-    """Permet au prestataire de téléverser sa pièce d'identité (recto/verso)."""
+    """Permet au prestataire de téléverser sa pièce d'identité et son selfie."""
 
     class Meta:
         model = Prestataire
-        fields = ['piece_identite_recto', 'piece_identite_verso']
+        fields = ['piece_identite_recto', 'piece_identite_verso', 'selfie_avec_piece']

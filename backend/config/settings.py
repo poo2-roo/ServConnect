@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'reviews',
     'messaging',
     'ai_services',
+    'publications',
 ]
 
 MIDDLEWARE = [
