@@ -48,3 +48,22 @@ class AvisReponseView(APIView):
         avis.reponse_prestataire = request.data.get('reponse_prestataire', '')
         avis.save(update_fields=['reponse_prestataire'])
         return Response(AvisSerializer(avis).data)
+
+from accounts.permissions import EstAdministrateur
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+
+class AdminAvisSupprimerView(APIView):
+    """DELETE /api/reviews/admin/<id>/ — suppression d'un avis abusif."""
+
+    permission_classes = [EstAdministrateur]
+
+    def delete(self, request, pk):
+        try:
+            avis = Avis.objects.get(pk=pk)
+        except Avis.DoesNotExist:
+            return Response({"detail": "Avis introuvable."}, status=404)
+
+        avis.delete()
+        return Response(status=204)

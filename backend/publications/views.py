@@ -89,3 +89,20 @@ class CommentaireListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(publication_id=self.kwargs['publication_id'], auteur=self.request.user)
+
+from accounts.permissions import EstAdministrateur
+
+
+class AdminPublicationSupprimerView(APIView):
+    """DELETE /api/publications/admin/<id>/ — suppression pour modération."""
+
+    permission_classes = [EstAdministrateur]
+
+    def delete(self, request, pk):
+        try:
+            publication = Publication.objects.get(pk=pk)
+        except Publication.DoesNotExist:
+            return Response({"detail": "Publication introuvable."}, status=404)
+
+        publication.delete()
+        return Response(status=204)

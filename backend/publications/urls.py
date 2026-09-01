@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AdminPublicationSupprimerView,
     CommentaireListCreateView,
     PublicationDetailView,
     PublicationLikeView,
@@ -12,4 +13,5 @@ urlpatterns = [
     path('<int:pk>/', PublicationDetailView.as_view(), name='publication-detail'),
     path('<int:pk>/aimer/', PublicationLikeView.as_view(), name='publication-aimer'),
     path('<int:publication_id>/commentaires/', CommentaireListCreateView.as_view(), name='commentaire-list-create'),
+    path('admin/<int:pk>/', AdminPublicationSupprimerView.as_view(), name='admin-publication-supprimer'),
 ]
