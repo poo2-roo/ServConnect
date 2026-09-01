@@ -98,3 +98,110 @@ class PrestataireKYCVerifierView(APIView):
             'document_lisible': resultat['document_lisible'],
             'signes_suspects': resultat.get('signes_suspects', []),
         })
+
+class DevenirPrestataireView(APIView):
+    """POST /api/accounts/moi/devenir-prestataire/ — active un profil Prestataire."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if hasattr(request.user, 'profil_prestataire'):
+            return Response(
+                {"detail": "Vous avez déjà un profil prestataire."}, status=400
+            )
+
+        from .serializers import DevenirPrestataireSerializer
+        serializer = DevenirPrestataireSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        prestataire = serializer.save(utilisateur=request.user)
+
+        request.user.role = Utilisateur.Role.PRESTATAIRE
+        request.user.save(update_fields=['role'])
+
+        return Response(PrestataireSerializer(prestataire).data, status=201)
+
+class BasculerModeView(APIView):
+    """POST /api/accounts/moi/basculer-mode/ — change le rôle affiché (client <-> prestataire)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        nouveau_mode = request.data.get('mode')
+
+        if nouveau_mode not in (Utilisateur.Role.CLIENT, Utilisateur.Role.PRESTATAIRE):
+            return Response(
+                {"detail": "Le champ 'mode' doit être 'client' ou 'prestataire'."}, status=400
+            )
+
+        if nouveau_mode == Utilisateur.Role.PRESTATAIRE and not hasattr(user, 'profil_prestataire'):
+            return Response(
+                {"detail": "Vous n'avez pas encore de profil prestataire. Activez-le d'abord via /moi/devenir-prestataire/."},
+                status=400,
+            )
+
+        user.role = nouveau_mode
+        user.save(update_fields=['role'])
+
+        return Response(UtilisateurSerializer(user).data)
+
+from .permissions import EstAdministrateur
+
+
+class AdminPrestatairesEnAttenteView(generics.ListAPIView):
+    """GET /api/accounts/admin/prestataires-en-attente/ — file d'attente KYC."""
+
+    serializer_class = PrestataireSerializer
+    permission_classes = [EstAdministrateur]
+
+    def get_queryset(self):
+        return Prestataire.objects.filter(
+            statut_kyc=Prestataire.StatutKYC.EN_ATTENTE
+        ).select_related('utilisateur')
+
+
+class AdminValiderKYCView(APIView):
+    """POST /api/accounts/admin/prestataires/<id>/valider-kyc/ — décision manuelle."""
+
+    permission_classes = [EstAdministrateur]
+
+    def post(self, request, pk):
+        try:
+            prestataire = Prestataire.objects.get(pk=pk)
+        except Prestataire.DoesNotExist:
+            return Response({"detail": "Prestataire introuvable."}, status=404)
+
+        decision = request.data.get('decision')
+        if decision not in (Prestataire.StatutKYC.VERIFIE, Prestataire.StatutKYC.REJETE):
+            return Response(
+                {"detail": "Le champ 'decision' doit être 'verifie' ou 'rejete'."}, status=400
+            )
+
+        prestataire.statut_kyc = decision
+        prestataire.kyc_commentaire = request.data.get('commentaire', '')
+        prestataire.save(update_fields=['statut_kyc', 'kyc_commentaire'])
+
+        return Response(PrestataireSerializer(prestataire).data)
+
+
+class AdminBasculerActivationCompteView(APIView):
+    """POST /api/accounts/admin/utilisateurs/<id>/basculer-activation/ — bannir/réactiver."""
+
+    permission_classes = [EstAdministrateur]
+
+    def post(self, request, pk):
+        try:
+            utilisateur = Utilisateur.objects.get(pk=pk)
+        except Utilisateur.DoesNotExist:
+            return Response({"detail": "Utilisateur introuvable."}, status=404)
+
+        if hasattr(utilisateur, 'profil_administrateur'):
+            return Response(
+                {"detail": "Impossible de désactiver un compte administrateur."}, status=400
+            )
+
+        utilisateur.is_active = not utilisateur.is_active
+        utilisateur.save(update_fields=['is_active'])
+
+        return Response({"id": utilisateur.id, "is_active": utilisateur.is_active})

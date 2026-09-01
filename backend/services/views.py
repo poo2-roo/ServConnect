@@ -202,3 +202,21 @@ class ServiceGenererImageView(APIView):
         service_image = ServiceImage.objects.create(service=service, image_originale=fichier_image)
 
         return Response(ServiceImageSerializer(service_image).data, status=201)
+
+from accounts.permissions import EstAdministrateur
+
+
+class AdminCategorieListCreateView(generics.ListCreateAPIView):
+    """GET/POST /api/services/admin/categories/ — gestion complète des catégories."""
+
+    queryset = Categorie.objects.all()
+    serializer_class = CategorieSerializer
+    permission_classes = [EstAdministrateur]
+
+
+class AdminCategorieDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """GET/PUT/PATCH/DELETE /api/services/admin/categories/<id>/"""
+
+    queryset = Categorie.objects.all()
+    serializer_class = CategorieSerializer
+    permission_classes = [EstAdministrateur]

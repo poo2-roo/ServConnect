@@ -46,9 +46,9 @@ class InscriptionSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
 
-        if user.role == Utilisateur.Role.CLIENT:
-            Client.objects.create(utilisateur=user)
-        elif user.role == Utilisateur.Role.PRESTATAIRE:
+       
+        Client.objects.create(utilisateur=user)
+        if user.role == Utilisateur.Role.PRESTATAIRE:
             Prestataire.objects.create(utilisateur=user)
 
         return user
@@ -81,3 +81,10 @@ class PrestataireKYCUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prestataire
         fields = ['piece_identite_recto', 'piece_identite_verso', 'selfie_avec_piece']
+
+class DevenirPrestataireSerializer(serializers.ModelSerializer):
+    """Utilisé pour activer un profil Prestataire sur un compte existant."""
+
+    class Meta:
+        model = Prestataire
+        fields = ['nom_entreprise', 'description', 'annees_experience']

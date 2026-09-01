@@ -1,5 +1,7 @@
 from django.urls import path
 from .views import (
+    AdminCategorieDetailView,
+    AdminCategorieListCreateView,
     CategorieListView,
     RecommandationServicesView,
     RedigerDescriptionView,
@@ -13,6 +15,8 @@ from .views import (
 
 urlpatterns = [
     path('categories/', CategorieListView.as_view(), name='categorie-list'),
+    path('admin/categories/', AdminCategorieListCreateView.as_view(), name='admin-categorie-list-create'),
+    path('admin/categories/<int:pk>/', AdminCategorieDetailView.as_view(), name='admin-categorie-detail'),
     path('services/', ServiceListCreateView.as_view(), name='service-list-create'),
     path('services/recommandations/', RecommandationServicesView.as_view(), name='service-recommandations'),
     path('rediger-description/', RedigerDescriptionView.as_view(), name='rediger-description'),
