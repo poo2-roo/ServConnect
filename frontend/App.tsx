@@ -1,20 +1,34 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import ConnexionScreen from './src/screens/ConnexionScreen';
+import { View, Text, ActivityIndicator } from 'react-native';
 
-export default function App() {
+function Racine() {
+  const { utilisateur, chargement } = useAuth();
+
+  if (chargement) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (!utilisateur) {
+    return <ConnexionScreen />;
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Bonjour jason!</Text>
-      <StatusBar style="auto" />
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>Connecté en tant que {utilisateur.username} !</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default function App() {
+  return (
+    <AuthProvider>
+      <Racine />
+    </AuthProvider>
+  );
+}
