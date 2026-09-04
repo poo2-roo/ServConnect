@@ -151,6 +151,7 @@ SIMPLE_JWT = {
 # --------------------------------------------------------------------------
 # CORS — pour le frontend Expo (web + mobile en dev)
 # --------------------------------------------------------------------------
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='http://localhost:8081,http://localhost:19006',

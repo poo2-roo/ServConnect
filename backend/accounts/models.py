@@ -54,6 +54,8 @@ class Client(models.Model):
     )
     adresse_habituelle = models.CharField(max_length=255, blank=True)
     nombre_demandes = models.PositiveIntegerField(default=0)
+    latitude = models.FloatField(blank=True, null=True)
+    longitude = models.FloatField(blank=True, null=True)
 
     class Meta:
         verbose_name = "Client"
