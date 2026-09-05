@@ -7,15 +7,20 @@ from .models import Administrateur, Client, Prestataire, Utilisateur
 class UtilisateurSerializer(serializers.ModelSerializer):
     """Représentation en lecture d'un utilisateur (pour l'API)."""
 
+    a_profil_prestataire = serializers.SerializerMethodField()
+
     class Meta:
         model = Utilisateur
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
             'telephone', 'role', 'photo_profil', 'date_naissance',
             'langue_preferee', 'telephone_verifie', 'date_creation',
+            'a_profil_prestataire',
         ]
         read_only_fields = ['id', 'telephone_verifie', 'date_creation']
 
+    def get_a_profil_prestataire(self, obj):
+        return hasattr(obj, 'profil_prestataire')
 
 class InscriptionSerializer(serializers.ModelSerializer):
     """
