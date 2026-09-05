@@ -169,3 +169,16 @@ CORS_ALLOW_CREDENTIALS = True
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 SMILE_IDENTITY_PARTNER_ID = config('SMILE_IDENTITY_PARTNER_ID', default='')
 SMILE_IDENTITY_API_KEY = config('SMILE_IDENTITY_API_KEY', default='')
+
+# --------------------------------------------------------------------------
+# Stockage des fichiers médias — Supabase Storage
+# --------------------------------------------------------------------------
+SUPABASE_URL = config('SUPABASE_URL', default='')
+SUPABASE_KEY = config('SUPABASE_KEY', default='')
+SUPABASE_BUCKET = config('SUPABASE_BUCKET', default='media')
+
+if SUPABASE_URL and SUPABASE_KEY:
+    STORAGES = {
+        'default': {'BACKEND': 'django_supabase_storage.SupabaseMediaStorage'},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    }
