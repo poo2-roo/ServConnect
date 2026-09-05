@@ -83,6 +83,10 @@ class Prestataire(models.Model):
     nom_entreprise = models.CharField(max_length=150, blank=True)
     description = models.TextField(blank=True)
     annees_experience = models.PositiveSmallIntegerField(blank=True, null=True)
+    categories = models.ManyToManyField(
+        'services.Categorie', related_name='prestataires', blank=True,
+        help_text="Catégories de services proposées par ce prestataire.",
+    )
 
     # Module IA #2 — KYC via analyse de pièce d'identité (Smile Identity)
     piece_identite_recto = models.ImageField(upload_to='kyc/', blank=True, null=True)

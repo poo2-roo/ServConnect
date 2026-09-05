@@ -1,4 +1,5 @@
 from django.contrib.auth.password_validation import validate_password
+from backend.services.models import Categorie
 from rest_framework import serializers
 
 from .models import Administrateur, Client, Prestataire, Utilisateur
@@ -77,15 +78,22 @@ class ClientSerializer(serializers.ModelSerializer):
         fields = ['id', 'utilisateur', 'adresse_habituelle', 'nombre_demandes', 'latitude', 'longitude']
 
 
+class CategorieSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categorie
+        fields = ['id', 'nom']
+
+
 class PrestataireSerializer(serializers.ModelSerializer):
     utilisateur = UtilisateurSerializer(read_only=True)
+    categories = CategorieSimpleSerializer(many=True, read_only=True)
 
     class Meta:
         model = Prestataire
         fields = [
             'id', 'utilisateur', 'nom_entreprise', 'description',
             'annees_experience', 'statut_kyc', 'note_moyenne',
-            'nombre_avis', 'est_disponible',
+            'nombre_avis', 'est_disponible', 'categories',
         ]
         read_only_fields = ['statut_kyc', 'note_moyenne', 'nombre_avis']
 
@@ -101,6 +109,10 @@ class PrestataireKYCUploadSerializer(serializers.ModelSerializer):
 class DevenirPrestataireSerializer(serializers.ModelSerializer):
     """Utilisé pour activer un profil Prestataire sur un compte existant."""
 
+    categories = serializers.PrimaryKeyRelatedField(
+        queryset=Categorie.objects.all(), many=True, required=False
+    )
+
     class Meta:
         model = Prestataire
-        fields = ['nom_entreprise', 'description', 'annees_experience']
+        fields = ['nom_entreprise', 'description', 'annees_experience', 'categories']

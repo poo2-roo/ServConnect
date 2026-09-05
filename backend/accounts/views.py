@@ -205,3 +205,18 @@ class AdminBasculerActivationCompteView(APIView):
         utilisateur.save(update_fields=['is_active'])
 
         return Response({"id": utilisateur.id, "is_active": utilisateur.is_active})
+
+class PrestataireCategoriesUpdateView(APIView):
+    """PATCH /api/accounts/moi/categories/ — modifier les catégories de son profil prestataire."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        prestataire = getattr(request.user, 'profil_prestataire', None)
+        if prestataire is None:
+            raise PermissionDenied("Vous n'avez pas de profil prestataire.")
+
+        categorie_ids = request.data.get('categories', [])
+        prestataire.categories.set(categorie_ids)
+
+        return Response(PrestataireSerializer(prestataire).data)
