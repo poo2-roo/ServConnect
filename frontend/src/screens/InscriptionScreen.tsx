@@ -62,7 +62,11 @@ export default function InscriptionScreen({ onRetourConnexion }: { onRetourConne
         username, password: motDePasse, telephone,
         email, first_name: prenom, last_name: nom, latitude, longitude,
       });
-       } catch (erreur: any) {
+      Alert.alert(
+        'Compte créé !',
+        `Notez bien votre identifiant de connexion : ${username}\n\nVous en aurez besoin pour vous reconnecter.`
+      );
+    } catch (erreur: any) {
       console.log('Erreur complete:', JSON.stringify(erreur, null, 2));
       const detail = erreur?.response?.data;
       const status = erreur?.response?.status;
@@ -71,7 +75,7 @@ export default function InscriptionScreen({ onRetourConnexion }: { onRetourConne
         : `Pas de réponse du serveur. Code: ${erreur?.code || 'inconnu'}. Message: ${erreur?.message || 'inconnu'}.`;
       Alert.alert(`Inscription impossible (statut: ${status || 'aucun'})`, message);
       setEtape('formulaire');
-    }finally {
+    } finally {
       setChargement(false);
     }
   }
