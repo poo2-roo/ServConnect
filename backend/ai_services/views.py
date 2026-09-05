@@ -47,3 +47,49 @@ class MesInteractionsVocalesView(generics.ListAPIView):
 
     def get_queryset(self):
         return InteractionVocale.objects.filter(utilisateur=self.request.user)
+
+import base64
+
+from .ameliorer_image_generique import ameliorer_image_bytes
+from .legende_publication import generer_legende
+from .models import JournalAppelIA
+
+
+class AmeliorerImageBrouillonView(APIView):
+    """POST /api/ai/ameliorer-image/ - ameliore une image pas encore publiee, renvoie du base64."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        fichier = request.FILES.get('image')
+        if fichier is None:
+            raise ValidationError("Le fichier 'image' est obligatoire.")
+
+        try:
+            resultat = ameliorer_image_bytes(fichier.read())
+        except Exception as exc:
+            return Response({"detail": f"Echec de l'amelioration : {exc}"}, status=502)
+
+        JournalAppelIA.objects.create(
+            utilisateur=request.user, module=JournalAppelIA.Module.RETOUCHE_IMAGE,
+            modele_utilise='pillow-local', succes=True,
+        )
+
+        return Response({"image_base64": base64.b64encode(resultat).decode('ascii')})
+
+
+class GenererLegendeView(APIView):
+    """POST /api/ai/generer-legende/ - genere une legende pour un brouillon de publication."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        type_publication = request.data.get('type_publication', 'actualite')
+        notes_brutes = request.data.get('notes_brutes', '')
+
+        try:
+            legende = generer_legende(type_publication, notes_brutes, utilisateur=request.user)
+        except ErreurAppelIA as exc:
+            return Response({"detail": str(exc)}, status=502)
+
+        return Response({"legende": legende})
