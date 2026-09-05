@@ -6,6 +6,10 @@ import { Utilisateur, TokensAuth } from '../types';
 interface AuthContextType {
   utilisateur: Utilisateur | null;
   chargement: boolean;
+  inscription: (donnees: {
+    username: string; password: string; telephone: string;
+    email: string; first_name: string; last_name: string; ville?: string;
+  }) => Promise<void>;
   connexion: (username: string, password: string) => Promise<void>;
   deconnexion: () => Promise<void>;
 }
@@ -43,6 +47,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUtilisateur(profil.data);
   }
 
+  async function inscription(donnees: {
+    username: string; password: string; telephone: string;
+    email: string; first_name: string; last_name: string;
+    latitude?: number; longitude?: number;
+  }) {
+    await api.post('/api/accounts/inscription/', { ...donnees, role: 'client' });
+    await connexion(donnees.username, donnees.password);
+  }
+
   async function deconnexion() {
     await SecureStore.deleteItemAsync('access_token');
     await SecureStore.deleteItemAsync('refresh_token');
@@ -50,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ utilisateur, chargement, connexion, deconnexion }}>
+    <AuthContext.Provider value={{ utilisateur, chargement, connexion, deconnexion, inscription }}>
       {children}
     </AuthContext.Provider>
   );

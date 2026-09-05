@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements } from '../theme/styles';
 
-export default function ConnexionScreen() {
+export default function ConnexionScreen({ onAllerInscription }: { onAllerInscription: () => void }) {
   const { connexion } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -53,7 +53,7 @@ export default function ConnexionScreen() {
 
         <TextInput
           style={styles.champ}
-          placeholder="Email ou numéro de téléphone"
+          placeholder="Nom d'utilisateur"
           placeholderTextColor={couleurs.neutre}
           value={username}
           onChangeText={setUsername}
@@ -97,7 +97,7 @@ export default function ConnexionScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.piedDePage}>
+        <TouchableOpacity style={styles.piedDePage} onPress={onAllerInscription}>
           <Text style={styles.piedDePageTexte}>
             Nouveau sur ServConnect ? <Text style={styles.piedDePageLien}>Créer un compte</Text>
           </Text>

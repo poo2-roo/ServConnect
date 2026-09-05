@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import ConnexionScreen from './src/screens/ConnexionScreen';
-import { View, Text, ActivityIndicator } from 'react-native';
+import InscriptionScreen from './src/screens/InscriptionScreen';
+import MainTabs from './src/navigation/MainTabs';
 
 function Racine() {
   const { utilisateur, chargement } = useAuth();
+  const [afficherInscription, setAfficherInscription] = useState(false);
 
   if (chargement) {
     return (
@@ -15,20 +19,22 @@ function Racine() {
   }
 
   if (!utilisateur) {
-    return <ConnexionScreen />;
+    return afficherInscription ? (
+      <InscriptionScreen onRetourConnexion={() => setAfficherInscription(false)} />
+    ) : (
+      <ConnexionScreen onAllerInscription={() => setAfficherInscription(true)} />
+    );
   }
 
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Connecté en tant que {utilisateur.username} !</Text>
-    </View>
-  );
+  return <MainTabs />;
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <Racine />
+      <NavigationContainer>
+        <Racine />
+      </NavigationContainer>
     </AuthProvider>
   );
 }

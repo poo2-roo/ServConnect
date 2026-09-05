@@ -12,3 +12,4 @@ class PublicationAdmin(admin.ModelAdmin):
 @admin.register(Commentaire)
 class CommentaireAdmin(admin.ModelAdmin):
     list_display = ('publication', 'auteur', 'date_creation')
+

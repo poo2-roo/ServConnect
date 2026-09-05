@@ -13,7 +13,7 @@ export const espacements = {
   sm: 8,
   md: 20,
   lg: 30,
-  xl: 32,
+  xl: 50,
 };
 
 export const stylesPartages = StyleSheet.create({

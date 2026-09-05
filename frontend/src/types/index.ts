@@ -17,3 +17,37 @@ export interface TokensAuth {
   access: string;
   refresh: string;
 }
+
+export interface Publication {
+  id: number;
+  prestataire: number;
+  prestataire_nom: string;
+  prestataire_note: string;
+  prestataire_avatar: string | null;
+  type_publication: 'annonce' | 'promotion' | 'actualite';
+  contenu: string;
+  image: string | null;
+  nombre_likes: number;
+  nombre_commentaires: number;
+  jaime_deja: boolean;
+  date_creation: string;
+}
+
+export interface Categorie {
+  id: number;
+  nom: string;
+  description: string;
+  icone: string;
+}
+
+export interface Prestataire {
+  id: number;
+  utilisateur: Utilisateur;
+  nom_entreprise: string;
+  description: string;
+  annees_experience: number | null;
+  statut_kyc: string;
+  note_moyenne: string;
+  nombre_avis: number;
+  est_disponible: boolean;
+}
