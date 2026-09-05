@@ -1,5 +1,5 @@
 from django.contrib.auth.password_validation import validate_password
-from backend.services.models import Categorie
+from services.models import Categorie
 from rest_framework import serializers
 
 from .models import Administrateur, Client, Prestataire, Utilisateur
