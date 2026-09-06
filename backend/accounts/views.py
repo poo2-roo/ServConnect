@@ -220,3 +220,15 @@ class PrestataireCategoriesUpdateView(APIView):
         prestataire.categories.set(categorie_ids)
 
         return Response(PrestataireSerializer(prestataire).data)
+
+class MonProfilPrestataireView(generics.RetrieveAPIView):
+    """GET /api/accounts/moi/prestataire/ — mon propre profil prestataire complet."""
+
+    serializer_class = PrestataireSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        prestataire = getattr(self.request.user, 'profil_prestataire', None)
+        if prestataire is None:
+            raise PermissionDenied("Vous n'avez pas de profil prestataire.")
+        return prestataire

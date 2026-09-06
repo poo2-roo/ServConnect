@@ -9,6 +9,7 @@ from .views import (
     ClientDetailView,
     DevenirPrestataireView,
     InscriptionView,
+    MonProfilPrestataireView,
     PrestataireCategoriesUpdateView,
     PrestataireDetailView,
     PrestataireKYCUploadView,
@@ -33,5 +34,6 @@ urlpatterns = [
     path('admin/prestataires-en-attente/', AdminPrestatairesEnAttenteView.as_view(), name='admin-prestataires-en-attente'),
     path('admin/prestataires/<int:pk>/valider-kyc/', AdminValiderKYCView.as_view(), name='admin-valider-kyc'),
     path('admin/utilisateurs/<int:pk>/basculer-activation/', AdminBasculerActivationCompteView.as_view(), name='admin-basculer-activation'),
-        path('moi/categories/', PrestataireCategoriesUpdateView.as_view(), name='prestataire-categories'),
+    path('moi/categories/', PrestataireCategoriesUpdateView.as_view(), name='prestataire-categories'),
+    path('moi/prestataire/', MonProfilPrestataireView.as_view(), name='mon-profil-prestataire'),
 ]
