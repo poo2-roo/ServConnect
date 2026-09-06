@@ -1,5 +1,5 @@
 import api from './api';
-import { Utilisateur } from '../types';
+import { Utilisateur, Prestataire } from '../types';
 
 export async function mettreAJourProfil(donnees: Partial<{
   first_name: string; last_name: string; email: string; telephone: string;
@@ -15,12 +15,6 @@ export async function mettreAJourPhoto(uriImage: string): Promise<Utilisateur> {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return reponse.data;
-}
-
-export async function devenirPrestataire(donnees: {
-  nom_entreprise: string; description: string; annees_experience?: number;
-}): Promise<void> {
-  await api.post('/api/accounts/moi/devenir-prestataire/', donnees);
 }
 
 export async function uploaderKYC(rectoUri: string, selfieUri: string): Promise<void> {
@@ -45,4 +39,9 @@ export async function devenirPrestataireAvecCategories(donnees: {
 
 export async function mettreAJourCategories(categorieIds: number[]): Promise<void> {
   await api.patch('/api/accounts/moi/categories/', { categories: categorieIds });
+}
+
+export async function recupererMonProfilPrestataire(): Promise<Prestataire> {
+  const reponse = await api.get<Prestataire>('/api/accounts/moi/prestataire/');
+  return reponse.data;
 }

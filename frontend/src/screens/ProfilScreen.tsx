@@ -1,6 +1,4 @@
-import React, { useState } from 'react';
-import SelecteurCategories from '../components/SelecteurCategories';
-import { devenirPrestataireAvecCategories, mettreAJourCategories } from '../services/profil';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, Image, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, ActivityIndicator,
@@ -8,10 +6,15 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { mettreAJourPhoto, mettreAJourProfil, devenirPrestataire } from '../services/profil';
+import {
+  mettreAJourPhoto, mettreAJourProfil, devenirPrestataireAvecCategories,
+  recupererMonProfilPrestataire, mettreAJourCategories,
+} from '../services/profil';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements, stylesPartages } from '../theme/styles';
+import { Prestataire } from '../types';
 import KYCSection from '../components/KYCSection';
+import SelecteurCategories from '../components/SelecteurCategories';
 
 const AVATAR_PLACEHOLDER = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&q=80';
 
@@ -24,13 +27,28 @@ export default function ProfilScreen() {
   const [chargementPhoto, setChargementPhoto] = useState(false);
   const [chargementSauvegarde, setChargementSauvegarde] = useState(false);
 
-    const [categoriesSelectionnees, setCategoriesSelectionnees] = useState<number[]>([]);
+  const [monPrestataire, setMonPrestataire] = useState<Prestataire | null>(null);
+  const [modificationCategories, setModificationCategories] = useState(false);
+  const [categoriesEnEdition, setCategoriesEnEdition] = useState<number[]>([]);
+  const [chargementCategories, setChargementCategories] = useState(false);
 
   // Formulaire "devenir prestataire"
+  const [categoriesSelectionnees, setCategoriesSelectionnees] = useState<number[]>([]);
   const [afficherFormPrestataire, setAfficherFormPrestataire] = useState(false);
   const [nomEntreprise, setNomEntreprise] = useState('');
   const [descriptionEntreprise, setDescriptionEntreprise] = useState('');
   const [chargementPrestataire, setChargementPrestataire] = useState(false);
+
+  useEffect(() => {
+    if (utilisateur?.a_profil_prestataire) {
+      recupererMonProfilPrestataire()
+        .then((p) => {
+          setMonPrestataire(p);
+          setCategoriesEnEdition(p.categories.map((c) => c.id));
+        })
+        .catch(() => {});
+    }
+  }, [utilisateur?.a_profil_prestataire]);
 
   async function handleChangerPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -82,20 +100,32 @@ export default function ProfilScreen() {
     } catch (erreur: any) {
       const detail = erreur?.response?.data?.detail || '';
       if (detail.includes('déjà un profil prestataire')) {
-        // Le profil a bien été créé lors d'une tentative précédente, seul le
-        // rafraîchissement avait échoué (probablement un souci réseau).
         try {
           await rafraichirUtilisateur();
           setAfficherFormPrestataire(false);
           Alert.alert('Profil déjà activé', 'Votre profil prestataire était déjà actif.');
         } catch {
-          Alert.alert('Erreur réseau', 'Le profil existe mais la synchronisation a échoué. Vérifiez votre connexion et rouvrez l\'app.');
+          Alert.alert('Erreur réseau', "Le profil existe mais la synchronisation a échoué. Vérifiez votre connexion et rouvrez l'app.");
         }
       } else {
         Alert.alert('Erreur', detail ? JSON.stringify(erreur.response.data) : "Impossible d'activer le profil prestataire.");
       }
     } finally {
       setChargementPrestataire(false);
+    }
+  }
+
+  async function handleSauvegarderCategories() {
+    setChargementCategories(true);
+    try {
+      await mettreAJourCategories(categoriesEnEdition);
+      const misAJour = await recupererMonProfilPrestataire();
+      setMonPrestataire(misAJour);
+      setModificationCategories(false);
+    } catch {
+      Alert.alert('Erreur', 'Impossible de mettre à jour les catégories.');
+    } finally {
+      setChargementCategories(false);
     }
   }
 
@@ -151,7 +181,7 @@ export default function ProfilScreen() {
           <Text style={styles.titreSection}>Créer mon profil prestataire</Text>
           <TextInput style={styles.champ} value={nomEntreprise} onChangeText={setNomEntreprise} placeholder="Nom de votre activité" />
           <TextInput style={[styles.champ, { height: 80 }]} value={descriptionEntreprise} onChangeText={setDescriptionEntreprise} placeholder="Description" multiline />
-                    <Text style={styles.label}>Catégories de services proposées</Text>
+          <Text style={styles.label}>Catégories de services proposées</Text>
           <SelecteurCategories selection={categoriesSelectionnees} onChange={setCategoriesSelectionnees} />
           <TouchableOpacity style={stylesPartages.boutonPrincipal} onPress={handleDevenirPrestataire} disabled={chargementPrestataire}>
             {chargementPrestataire ? <ActivityIndicator color={couleurs.blanc} /> : <Text style={stylesPartages.boutonPrincipalTexte}>Activer</Text>}
@@ -159,7 +189,45 @@ export default function ProfilScreen() {
         </View>
       )}
 
-      {utilisateur.a_profil_prestataire && <KYCSection />}
+      {utilisateur.a_profil_prestataire && (
+        <>
+          <View style={styles.sectionCategories}>
+            <Text style={styles.titreSection}>Mes catégories</Text>
+            {modificationCategories ? (
+              <>
+                <SelecteurCategories selection={categoriesEnEdition} onChange={setCategoriesEnEdition} />
+                <View style={styles.rangeeBoutons}>
+                  <TouchableOpacity style={[stylesPartages.boutonContour, { flex: 1 }]} onPress={() => setModificationCategories(false)}>
+                    <Text style={stylesPartages.boutonContourTexte}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[stylesPartages.boutonPrincipal, { flex: 1 }]} onPress={handleSauvegarderCategories} disabled={chargementCategories}>
+                    {chargementCategories ? <ActivityIndicator color={couleurs.blanc} /> : <Text style={stylesPartages.boutonPrincipalTexte}>Enregistrer</Text>}
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.rangeeCategoriesLecture}>
+                  {monPrestataire?.categories.length ? (
+                    monPrestataire.categories.map((c) => (
+                      <View key={c.id} style={stylesPartages.pilleCategorie}>
+                        <Text style={{ color: couleurs.tertiaire, fontSize: 13 }}>{c.nom}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={{ color: couleurs.neutre, fontSize: 13 }}>Aucune catégorie sélectionnée.</Text>
+                  )}
+                </View>
+                <TouchableOpacity onPress={() => setModificationCategories(true)}>
+                  <Text style={styles.lienModifier}>Modifier mes catégories</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+
+          <KYCSection />
+        </>
+      )}
 
       <TouchableOpacity style={styles.boutonDeconnexion} onPress={deconnexion}>
         <Text style={styles.boutonDeconnexionTexte}>Se déconnecter</Text>
@@ -190,8 +258,11 @@ const styles = StyleSheet.create({
     width: '100%', borderWidth: 1, borderColor: couleurs.bordure, borderRadius: rayons.moyen,
     padding: 12, marginBottom: espacements.sm, fontSize: 14, backgroundColor: couleurs.blanc,
   },
-    label: { fontWeight: '600', color: couleurs.tertiaire, marginBottom: espacements.xs, alignSelf: 'flex-start' },
+  label: { fontWeight: '600', color: couleurs.tertiaire, marginBottom: espacements.xs, alignSelf: 'flex-start' },
   rangeeBoutons: { flexDirection: 'row', gap: espacements.sm },
+
+  sectionCategories: { width: '100%', marginBottom: espacements.md },
+  rangeeCategoriesLecture: { flexDirection: 'row', flexWrap: 'wrap', gap: espacements.xs, marginBottom: espacements.xs },
 
   separateur: { width: '100%', height: 1, backgroundColor: couleurs.bordure, marginVertical: espacements.md },
 

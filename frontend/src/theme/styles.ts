@@ -21,6 +21,8 @@ export const stylesPartages = StyleSheet.create({
     flex: 1,
     backgroundColor: couleurs.fond,
   },
+  sectionCategories: { width: '100%', marginBottom: espacements.md },
+  rangeeCategoriesLecture: { flexDirection: 'row', flexWrap: 'wrap', gap: espacements.xs, marginBottom: espacements.xs },
   carte: {
     backgroundColor: couleurs.blanc,
     borderRadius: rayons.grand,
