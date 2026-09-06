@@ -6,12 +6,14 @@ import { Utilisateur, TokensAuth } from '../types';
 interface AuthContextType {
   utilisateur: Utilisateur | null;
   chargement: boolean;
-  inscription: (donnees: {
-    username: string; password: string; telephone: string;
-    email: string; first_name: string; last_name: string; ville?: string;
-  }) => Promise<void>;
   connexion: (username: string, password: string) => Promise<void>;
   deconnexion: () => Promise<void>;
+  inscription: (donnees: {
+    username: string; password: string; telephone: string;
+    email: string; first_name: string; last_name: string;
+    latitude?: number; longitude?: number;
+  }) => Promise<void>;
+  rafraichirUtilisateur: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,6 +49,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUtilisateur(profil.data);
   }
 
+  async function deconnexion() {
+    await SecureStore.deleteItemAsync('access_token');
+    await SecureStore.deleteItemAsync('refresh_token');
+    setUtilisateur(null);
+  }
+
   async function inscription(donnees: {
     username: string; password: string; telephone: string;
     email: string; first_name: string; last_name: string;
@@ -56,14 +64,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await connexion(donnees.username, donnees.password);
   }
 
-  async function deconnexion() {
-    await SecureStore.deleteItemAsync('access_token');
-    await SecureStore.deleteItemAsync('refresh_token');
-    setUtilisateur(null);
+  async function rafraichirUtilisateur() {
+    const reponse = await api.get<Utilisateur>('/api/accounts/moi/');
+    setUtilisateur(reponse.data);
   }
 
   return (
-    <AuthContext.Provider value={{ utilisateur, chargement, connexion, deconnexion, inscription }}>
+    <AuthContext.Provider value={{ utilisateur, chargement, connexion, deconnexion, inscription, rafraichirUtilisateur }}>
       {children}
     </AuthContext.Provider>
   );

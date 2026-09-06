@@ -11,6 +11,7 @@ export interface Utilisateur {
   langue_preferee: 'fr' | 'en';
   telephone_verifie: boolean;
   date_creation: string;
+  a_profil_prestataire: boolean;
 }
 
 export interface TokensAuth {
@@ -50,4 +51,5 @@ export interface Prestataire {
   note_moyenne: string;
   nombre_avis: number;
   est_disponible: boolean;
+  categories: { id: number; nom: string }[];
 }
