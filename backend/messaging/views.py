@@ -19,7 +19,8 @@ class EstParticipant(permissions.BasePermission):
 class ConversationListCreateView(generics.ListCreateAPIView):
     """
     GET  /api/messaging/conversations/ — mes conversations (client ou prestataire connecté)
-    POST /api/messaging/conversations/ — un client démarre une conversation avec un prestataire
+    POST /api/messaging/conversations/ — récupère la conversation existante avec ce prestataire,
+                                          ou en crée une nouvelle si elle n'existe pas encore
     """
 
     serializer_class = ConversationSerializer
@@ -31,12 +32,21 @@ class ConversationListCreateView(generics.ListCreateAPIView):
             Q(client__utilisateur=user) | Q(prestataire__utilisateur=user)
         ).select_related('client__utilisateur', 'prestataire')
 
-    def perform_create(self, serializer):
-        client = getattr(self.request.user, 'profil_client', None)
+    def create(self, request, *args, **kwargs):
+        client = getattr(request.user, 'profil_client', None)
         if client is None:
             raise PermissionDenied("Seul un compte client peut démarrer une conversation.")
-        serializer.save(client=client)
 
+        prestataire_id = request.data.get('prestataire')
+        service_id = request.data.get('service')
+
+        conversation, cree = Conversation.objects.get_or_create(
+            client=client, prestataire_id=prestataire_id,
+            defaults={'service_id': service_id} if service_id else {},
+        )
+
+        serializer = self.get_serializer(conversation)
+        return Response(serializer.data, status=201 if cree else 200)
 
 class ConversationDetailView(generics.RetrieveAPIView):
     queryset = Conversation.objects.all()
@@ -63,8 +73,10 @@ class MessageListCreateView(generics.ListCreateAPIView):
         return conversation.messages.select_related('expediteur')
 
     def perform_create(self, serializer):
-        conversation = self.get_conversation()
-        serializer.save(conversation=conversation, expediteur=self.request.user)
+        client = getattr(self.request.user, 'profil_client', None)
+        if client is None:
+            raise PermissionDenied("Seul un compte client peut démarrer une conversation.")
+        serializer.save(client=client)
 
     def get_permissions(self):
         return [permissions.IsAuthenticated(), EstParticipant()]
