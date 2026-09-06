@@ -10,6 +10,7 @@ from .views import (
     DevenirPrestataireView,
     InscriptionView,
     MonProfilPrestataireView,
+    MonProfilPrestataireUpdateView,
     PrestataireCategoriesUpdateView,
     PrestataireDetailView,
     PrestataireKYCUploadView,
@@ -36,4 +37,5 @@ urlpatterns = [
     path('admin/utilisateurs/<int:pk>/basculer-activation/', AdminBasculerActivationCompteView.as_view(), name='admin-basculer-activation'),
     path('moi/categories/', PrestataireCategoriesUpdateView.as_view(), name='prestataire-categories'),
     path('moi/prestataire/', MonProfilPrestataireView.as_view(), name='mon-profil-prestataire'),
+    path('moi/prestataire/modifier/', MonProfilPrestataireUpdateView.as_view(), name='mon-profil-prestataire-modifier'),
 ]

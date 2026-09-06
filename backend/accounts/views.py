@@ -5,6 +5,7 @@ from rest_framework.exceptions import PermissionDenied
 from .models import Client, Prestataire, Utilisateur
 from .serializers import (
     ClientSerializer,
+    DevenirPrestataireSerializer,
     InscriptionSerializer,
     PrestataireSerializer,
     UtilisateurSerializer,
@@ -225,6 +226,18 @@ class MonProfilPrestataireView(generics.RetrieveAPIView):
     """GET /api/accounts/moi/prestataire/ — mon propre profil prestataire complet."""
 
     serializer_class = PrestataireSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        prestataire = getattr(self.request.user, 'profil_prestataire', None)
+        if prestataire is None:
+            raise PermissionDenied("Vous n'avez pas de profil prestataire.")
+        return prestataire
+
+class MonProfilPrestataireUpdateView(generics.UpdateAPIView):
+    """PATCH /api/accounts/moi/prestataire/modifier/ — modifier nom_entreprise/description/experience."""
+
+    serializer_class = DevenirPrestataireSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
