@@ -16,8 +16,6 @@ import { Prestataire } from '../types';
 import KYCSection from '../components/KYCSection';
 import SelecteurCategories from '../components/SelecteurCategories';
 
-const AVATAR_PLACEHOLDER = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&q=80';
-
 export default function ProfilScreen({ navigation }: any) {
   const { utilisateur, deconnexion, rafraichirUtilisateur } = useAuth();
   const [enEdition, setEnEdition] = useState(false);
@@ -161,7 +159,13 @@ export default function ProfilScreen({ navigation }: any) {
   return (
     <ScrollView style={styles.conteneur} contentContainerStyle={styles.scroll}>
       <TouchableOpacity onPress={handleChangerPhoto} style={styles.avatarConteneur}>
-        <Image source={{ uri: utilisateur.photo_profil || AVATAR_PLACEHOLDER }} style={styles.avatar} />
+        {utilisateur.photo_profil ? (
+          <Image source={{ uri: utilisateur.photo_profil }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarSansPhoto]}>
+            <Ionicons name="person" size={48} color={couleurs.neutre} />
+          </View>
+        )}
         <View style={styles.badgeAppareil}>
           {chargementPhoto ? (
             <ActivityIndicator size="small" color={couleurs.blanc} />
@@ -301,6 +305,7 @@ const styles = StyleSheet.create({
 
   avatarConteneur: { position: 'relative', marginBottom: espacements.sm },
   avatar: { width: 100, height: 100, borderRadius: rayons.rond, backgroundColor: couleurs.bordure },
+  avatarSansPhoto: { justifyContent: 'center', alignItems: 'center' },
   badgeAppareil: {
     position: 'absolute', bottom: 0, right: 0, backgroundColor: couleurs.bleuBase,
     borderRadius: rayons.rond, width: 28, height: 28, justifyContent: 'center', alignItems: 'center',

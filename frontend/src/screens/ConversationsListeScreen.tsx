@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
@@ -57,17 +57,23 @@ export default function ConversationsListeScreen({ navigation }: any) {
           renderItem={({ item }) => {
             const estPrestataire = utilisateur?.role === 'prestataire';
             const nom = estPrestataire ? item.client_nom : item.prestataire_nom;
+            const avatar = estPrestataire ? item.client_avatar : item.prestataire_avatar;
             return (
               <TouchableOpacity style={styles.carte} onPress={() => handleOuvrir(item)}>
-                <View style={styles.avatar}>
-                  <Ionicons name="person" size={20} color={couleurs.neutre} />
-                </View>
+                {avatar ? (
+                  <Image source={{ uri: avatar }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Ionicons name="person" size={20} color={couleurs.neutre} />
+                  </View>
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.nom}>{nom || 'Utilisateur'}</Text>
                   <Text style={styles.derniereActivite}>
                     {new Date(item.derniere_activite).toLocaleDateString('fr-FR')}
                   </Text>
                 </View>
+                {item.messages_non_lus > 0 && <View style={styles.pointNonLu} />}
                 <Ionicons name="chevron-forward" size={18} color={couleurs.neutre} />
               </TouchableOpacity>
             );
@@ -93,5 +99,6 @@ const styles = StyleSheet.create({
   },
   nom: { fontWeight: '600', color: couleurs.tertiaire, fontSize: 14 },
   derniereActivite: { fontSize: 12, color: couleurs.neutre, marginTop: 2 },
+  pointNonLu: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#D32F2F' },
   vide: { textAlign: 'center', color: couleurs.neutre, marginTop: espacements.xl },
 });

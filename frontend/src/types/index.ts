@@ -78,8 +78,11 @@ export interface Conversation {
   client: number;
   prestataire: number;
   prestataire_nom: string;
+  prestataire_avatar: string | null;
   client_nom: string;
+  client_avatar: string | null;
   derniere_activite: string;
+  messages_non_lus: number;
 }
 
 export interface Message {

@@ -22,6 +22,12 @@ class Conversation(models.Model):
         verbose_name = "Conversation"
         verbose_name_plural = "Conversations"
         ordering = ['-derniere_activite']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['client', 'prestataire'],
+                name='unique_conversation_client_prestataire',
+            ),
+        ]
 
     def __str__(self):
         return f"Conversation : {self.client} ↔ {self.prestataire}"

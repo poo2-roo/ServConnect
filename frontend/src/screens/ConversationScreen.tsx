@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { recupererMessages, envoyerMessage } from '../services/messagerie';
 import { Message } from '../types';
@@ -19,18 +20,23 @@ export default function ConversationScreen({ route, navigation }: any) {
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const listeRef = useRef<FlatList>(null);
 
-  async function charger() {
+  const charger = useCallback(async () => {
     try {
       const donnees = await recupererMessages(conversationId);
       setMessages(donnees);
     } finally {
       setChargement(false);
     }
-  }
-
-  useEffect(() => {
-    charger();
   }, [conversationId]);
+
+  useFocusEffect(
+    useCallback(() => {
+    charger();
+    const intervalle = setInterval(charger, 5000);
+
+    return () => clearInterval(intervalle);
+    }, [charger])
+  );
 
   async function handleEnvoyer() {
     if (!nouveauMessage.trim()) return;
@@ -42,13 +48,20 @@ export default function ConversationScreen({ route, navigation }: any) {
       setMessages((precedent) => [...precedent, message]);
       setTimeout(() => listeRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (erreur: any) {
-      setNouveauMessage(contenu); // on remet le texte si l'envoi a échoué
+      const erreurConfirmeeParServeur = Boolean(erreur?.response);
+      if (erreurConfirmeeParServeur) {
+        setNouveauMessage(contenu);
+      }
       const detail = erreur?.response?.data;
       Alert.alert(
-        `Envoi impossible (statut: ${erreur?.response?.status || 'aucun'})`,
+        erreurConfirmeeParServeur
+          ? `Envoi impossible (statut: ${erreur?.response?.status || 'inconnu'})`
+          : 'Connexion interrompue',
         detail
           ? JSON.stringify(detail)
-          : `${erreur?.message || 'Erreur inconnue'}\nCode: ${erreur?.code || 'inconnu'}\nURL: ${erreur?.config?.baseURL || ''}${erreur?.config?.url || ''}`,
+          : erreurConfirmeeParServeur
+            ? 'Le message n’a pas pu être envoyé. Vous pouvez réessayer.'
+            : 'Le message a peut-être été envoyé. Vérifiez la conversation lorsque la connexion sera rétablie.',
       );
     } finally {
       setEnvoiEnCours(false);

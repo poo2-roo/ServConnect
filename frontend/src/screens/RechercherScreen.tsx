@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import CartePrestataire from '../components/CartePrestataire';
 import { recupererCategories, recupererPrestataires } from '../services/annuaire';
 import { Categorie, Prestataire } from '../types';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements, stylesPartages } from '../theme/styles';
+import { creerConversation } from '../services/messagerie';
 
 export default function RechercherScreen({ navigation }: any) {
   const [recherche, setRecherche] = useState('');
@@ -33,6 +34,18 @@ export default function RechercherScreen({ navigation }: any) {
       p.categories.some((c) => c.id === categorieActive);
     return correspondRecherche && correspondCategorie;
   });
+
+  async function handleEnvoyerMessage(prestataire: Prestataire) {
+    try {
+      const conversation = await creerConversation(prestataire.id);
+      navigation.navigate('Conversation', {
+        conversationId: conversation.id,
+        nomInterlocuteur: prestataire.nom_entreprise || 'Prestataire',
+      });
+    } catch {
+      Alert.alert('Erreur', "Impossible de démarrer la conversation. Assurez-vous d'être connecté en tant que client.");
+    }
+  }
 
   return (
     <View style={styles.conteneur}>
@@ -76,6 +89,7 @@ export default function RechercherScreen({ navigation }: any) {
             <CartePrestataire
               prestataire={item}
               onVoirProfil={() => navigation.navigate('PrestataireDetail', { prestataireId: item.id })}
+              onEnvoyerMessage={() => handleEnvoyerMessage(item)}
             />
           )}
           contentContainerStyle={styles.listePrestataires}
