@@ -24,8 +24,22 @@ export default function ConversationScreen({ route, navigation }: any) {
   const listeRef = useRef<FlatList>(null);
   const messagesEnAttente = useRef<MessageAffiche[]>([]);
   const tentativesEnCours = useRef(new Set<number>());
+  const chargementEnCours = useRef(false);
   const prochainIdLocal = useRef(-1);
   const cleMessagesEnAttente = `messages_en_attente_${conversationId}`;
+
+  function afficherMessages(messagesServeur: MessageAffiche[]) {
+    const messagesLocaux = messagesEnAttente.current;
+    const messagesServeurAvecLocaux = messagesLocaux.reduce((tous, messageLocal) => {
+      const dejaConfirme = tous.some(
+        (messageServeur) =>
+          messageServeur.expediteur === messageLocal.expediteur &&
+          messageServeur.contenu === messageLocal.contenu
+      );
+      return dejaConfirme ? tous : [...tous, messageLocal];
+    }, messagesServeur);
+    setMessages(messagesServeurAvecLocaux);
+  }
 
   const sauvegarderMessagesEnAttente = useCallback(async (messagesAConserver: MessageAffiche[]) => {
     messagesEnAttente.current = messagesAConserver;
@@ -49,6 +63,8 @@ export default function ConversationScreen({ route, navigation }: any) {
   }, []);
 
   const charger = useCallback(async () => {
+    if (chargementEnCours.current) return;
+    chargementEnCours.current = true;
     try {
       const donnees = await recupererMessages(conversationId);
       const messagesServeur: MessageAffiche[] = donnees.map((message) => ({ ...message, enAttente: false }));
@@ -73,9 +89,10 @@ export default function ConversationScreen({ route, navigation }: any) {
           tentativesEnCours.current.delete(message.id);
         }
       }
-      setMessages([...messagesServeur, ...messagesEnAttente.current]);
+      afficherMessages(messagesServeur);
     } finally {
       setChargement(false);
+      chargementEnCours.current = false;
     }
   }, [ajouterMessageEnvoye, conversationId, sauvegarderMessagesEnAttente]);
 
