@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
@@ -11,31 +12,85 @@ import { Message } from '../types';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements } from '../theme/styles';
 
+type MessageAffiche = Message & { enAttente?: boolean };
+
 export default function ConversationScreen({ route, navigation }: any) {
   const { conversationId, nomInterlocuteur } = route.params;
   const { utilisateur } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MessageAffiche[]>([]);
   const [nouveauMessage, setNouveauMessage] = useState('');
   const [chargement, setChargement] = useState(true);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const listeRef = useRef<FlatList>(null);
+  const messagesEnAttente = useRef<MessageAffiche[]>([]);
+  const tentativesEnCours = useRef(new Set<number>());
+  const prochainIdLocal = useRef(-1);
+  const cleMessagesEnAttente = `messages_en_attente_${conversationId}`;
+
+  const sauvegarderMessagesEnAttente = useCallback(async (messagesAConserver: MessageAffiche[]) => {
+    messagesEnAttente.current = messagesAConserver;
+    await SecureStore.setItemAsync(cleMessagesEnAttente, JSON.stringify(messagesAConserver));
+  }, [cleMessagesEnAttente]);
+
+  const chargerMessagesEnAttente = useCallback(async () => {
+    const donnees = await SecureStore.getItemAsync(cleMessagesEnAttente);
+    if (!donnees) return;
+    try {
+      messagesEnAttente.current = JSON.parse(donnees);
+      setMessages((precedent) => [...precedent, ...messagesEnAttente.current]);
+    } catch {
+      await SecureStore.deleteItemAsync(cleMessagesEnAttente);
+    }
+  }, [cleMessagesEnAttente]);
+
+  const ajouterMessageEnvoye = useCallback((message: Message) => {
+    setMessages((precedent) => [...precedent.filter((item) => item.id !== message.id), message]);
+    setTimeout(() => listeRef.current?.scrollToEnd({ animated: true }), 100);
+  }, []);
 
   const charger = useCallback(async () => {
     try {
       const donnees = await recupererMessages(conversationId);
-      setMessages(donnees);
+      const messagesServeur: MessageAffiche[] = donnees.map((message) => ({ ...message, enAttente: false }));
+      const messagesEnAttenteRestants = [...messagesEnAttente.current];
+      for (const message of messagesEnAttenteRestants) {
+        const indexServeur = messagesServeur.findIndex(
+          (messageServeur) => messageServeur.expediteur === message.expediteur && messageServeur.contenu === message.contenu
+        );
+        if (indexServeur !== -1) {
+          await sauvegarderMessagesEnAttente(messagesEnAttente.current.filter((item) => item.id !== message.id));
+          continue;
+        }
+        if (tentativesEnCours.current.has(message.id)) continue;
+        tentativesEnCours.current.add(message.id);
+        try {
+          const messageEnvoye = await envoyerMessage(conversationId, message.contenu);
+          await sauvegarderMessagesEnAttente(messagesEnAttente.current.filter((item) => item.id !== message.id));
+          messagesServeur.push(messageEnvoye);
+        } catch {
+          // Le message reste transparent et sera retente au prochain rafraichissement.
+        } finally {
+          tentativesEnCours.current.delete(message.id);
+        }
+      }
+      setMessages([...messagesServeur, ...messagesEnAttente.current]);
     } finally {
       setChargement(false);
     }
-  }, [conversationId]);
+  }, [ajouterMessageEnvoye, conversationId, sauvegarderMessagesEnAttente]);
 
   useFocusEffect(
     useCallback(() => {
-    charger();
+    async function initialiser() {
+      await chargerMessagesEnAttente();
+      await charger();
+    }
+
+    initialiser();
     const intervalle = setInterval(charger, 5000);
 
     return () => clearInterval(intervalle);
-    }, [charger])
+    }, [charger, chargerMessagesEnAttente])
   );
 
   async function handleEnvoyer() {
@@ -45,12 +100,25 @@ export default function ConversationScreen({ route, navigation }: any) {
     setNouveauMessage('');
     try {
       const message = await envoyerMessage(conversationId, contenu);
-      setMessages((precedent) => [...precedent, message]);
-      setTimeout(() => listeRef.current?.scrollToEnd({ animated: true }), 100);
+      ajouterMessageEnvoye(message);
     } catch (erreur: any) {
       const erreurConfirmeeParServeur = Boolean(erreur?.response);
       if (erreurConfirmeeParServeur) {
         setNouveauMessage(contenu);
+      } else {
+        const messageEnAttente: MessageAffiche = {
+          id: prochainIdLocal.current--,
+          conversation: conversationId,
+          expediteur: utilisateur?.id || 0,
+          expediteur_nom: utilisateur?.username || '',
+          contenu,
+          est_suggestion_ia: false,
+          est_lu: false,
+          date_envoi: new Date().toISOString(),
+          enAttente: true,
+        };
+        sauvegarderMessagesEnAttente([...messagesEnAttente.current, messageEnAttente]);
+        setMessages((precedent) => [...precedent, messageEnAttente]);
       }
       const detail = erreur?.response?.data;
       Alert.alert(
@@ -89,7 +157,7 @@ export default function ConversationScreen({ route, navigation }: any) {
           renderItem={({ item }) => {
             const estMoi = item.expediteur === utilisateur?.id;
             return (
-              <View style={[styles.bulle, estMoi ? styles.bulleMoi : styles.bulleAutre]}>
+              <View style={[styles.bulle, estMoi ? styles.bulleMoi : styles.bulleAutre, item.enAttente && styles.bulleEnAttente]}>
                 <Text style={estMoi ? styles.texteMoi : styles.texteAutre}>{item.contenu}</Text>
               </View>
             );
@@ -132,6 +200,7 @@ const styles = StyleSheet.create({
 
   bulle: { maxWidth: '75%', borderRadius: rayons.moyen, padding: espacements.sm, marginBottom: espacements.xs },
   bulleMoi: { backgroundColor: couleurs.bleuBase, alignSelf: 'flex-end' },
+  bulleEnAttente: { backgroundColor: 'rgba(30, 136, 229, 0.45)' },
   bulleAutre: { backgroundColor: couleurs.blanc, alignSelf: 'flex-start', borderWidth: 1, borderColor: couleurs.bordure },
   texteMoi: { color: couleurs.blanc, fontSize: 14 },
   texteAutre: { color: couleurs.tertiaire, fontSize: 14 },
