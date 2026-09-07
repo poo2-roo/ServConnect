@@ -1,114 +1,36 @@
-import React, { useState, useCallback, useRef } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
+  ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { recupererMessages, envoyerMessage } from '../services/messagerie';
 import { Message } from '../types';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements } from '../theme/styles';
 
-type MessageAffiche = Message & { enAttente?: boolean };
-
 export default function ConversationScreen({ route, navigation }: any) {
   const { conversationId, nomInterlocuteur } = route.params;
   const { utilisateur } = useAuth();
-  const [messages, setMessages] = useState<MessageAffiche[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [nouveauMessage, setNouveauMessage] = useState('');
   const [chargement, setChargement] = useState(true);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const listeRef = useRef<FlatList>(null);
-  const messagesEnAttente = useRef<MessageAffiche[]>([]);
-  const tentativesEnCours = useRef(new Set<number>());
-  const chargementEnCours = useRef(false);
-  const prochainIdLocal = useRef(-1);
-  const cleMessagesEnAttente = `messages_en_attente_${conversationId}`;
 
-  function afficherMessages(messagesServeur: MessageAffiche[]) {
-    const messagesLocaux = messagesEnAttente.current;
-    const messagesServeurAvecLocaux = messagesLocaux.reduce((tous, messageLocal) => {
-      const dejaConfirme = tous.some(
-        (messageServeur) =>
-          messageServeur.expediteur === messageLocal.expediteur &&
-          messageServeur.contenu === messageLocal.contenu
-      );
-      return dejaConfirme ? tous : [...tous, messageLocal];
-    }, messagesServeur);
-    setMessages(messagesServeurAvecLocaux);
-  }
-
-  const sauvegarderMessagesEnAttente = useCallback(async (messagesAConserver: MessageAffiche[]) => {
-    messagesEnAttente.current = messagesAConserver;
-    await SecureStore.setItemAsync(cleMessagesEnAttente, JSON.stringify(messagesAConserver));
-  }, [cleMessagesEnAttente]);
-
-  const chargerMessagesEnAttente = useCallback(async () => {
-    const donnees = await SecureStore.getItemAsync(cleMessagesEnAttente);
-    if (!donnees) return;
-    try {
-      messagesEnAttente.current = JSON.parse(donnees);
-      setMessages((precedent) => [...precedent, ...messagesEnAttente.current]);
-    } catch {
-      await SecureStore.deleteItemAsync(cleMessagesEnAttente);
-    }
-  }, [cleMessagesEnAttente]);
-
-  const ajouterMessageEnvoye = useCallback((message: Message) => {
-    setMessages((precedent) => [...precedent.filter((item) => item.id !== message.id), message]);
-    setTimeout(() => listeRef.current?.scrollToEnd({ animated: true }), 100);
-  }, []);
-
-  const charger = useCallback(async () => {
-    if (chargementEnCours.current) return;
-    chargementEnCours.current = true;
+  async function charger() {
     try {
       const donnees = await recupererMessages(conversationId);
-      const messagesServeur: MessageAffiche[] = donnees.map((message) => ({ ...message, enAttente: false }));
-      const messagesEnAttenteRestants = [...messagesEnAttente.current];
-      for (const message of messagesEnAttenteRestants) {
-        const indexServeur = messagesServeur.findIndex(
-          (messageServeur) => messageServeur.expediteur === message.expediteur && messageServeur.contenu === message.contenu
-        );
-        if (indexServeur !== -1) {
-          await sauvegarderMessagesEnAttente(messagesEnAttente.current.filter((item) => item.id !== message.id));
-          continue;
-        }
-        if (tentativesEnCours.current.has(message.id)) continue;
-        tentativesEnCours.current.add(message.id);
-        try {
-          const messageEnvoye = await envoyerMessage(conversationId, message.contenu);
-          await sauvegarderMessagesEnAttente(messagesEnAttente.current.filter((item) => item.id !== message.id));
-          messagesServeur.push(messageEnvoye);
-        } catch {
-          // Le message reste transparent et sera retente au prochain rafraichissement.
-        } finally {
-          tentativesEnCours.current.delete(message.id);
-        }
-      }
-      afficherMessages(messagesServeur);
+      setMessages(donnees);
     } finally {
       setChargement(false);
-      chargementEnCours.current = false;
     }
-  }, [ajouterMessageEnvoye, conversationId, sauvegarderMessagesEnAttente]);
+  }
 
-  useFocusEffect(
-    useCallback(() => {
-    async function initialiser() {
-      await chargerMessagesEnAttente();
-      await charger();
-    }
-
-    initialiser();
-    const intervalle = setInterval(charger, 5000);
-
-    return () => clearInterval(intervalle);
-    }, [charger, chargerMessagesEnAttente])
-  );
+  useEffect(() => {
+    charger();
+  }, [conversationId]);
 
   async function handleEnvoyer() {
     if (!nouveauMessage.trim()) return;
@@ -117,37 +39,10 @@ export default function ConversationScreen({ route, navigation }: any) {
     setNouveauMessage('');
     try {
       const message = await envoyerMessage(conversationId, contenu);
-      ajouterMessageEnvoye(message);
-    } catch (erreur: any) {
-      const erreurConfirmeeParServeur = Boolean(erreur?.response);
-      if (erreurConfirmeeParServeur) {
-        setNouveauMessage(contenu);
-      } else {
-        const messageEnAttente: MessageAffiche = {
-          id: prochainIdLocal.current--,
-          conversation: conversationId,
-          expediteur: utilisateur?.id || 0,
-          expediteur_nom: utilisateur?.username || '',
-          contenu,
-          est_suggestion_ia: false,
-          est_lu: false,
-          date_envoi: new Date().toISOString(),
-          enAttente: true,
-        };
-        sauvegarderMessagesEnAttente([...messagesEnAttente.current, messageEnAttente]);
-        setMessages((precedent) => [...precedent, messageEnAttente]);
-      }
-      const detail = erreur?.response?.data;
-      Alert.alert(
-        erreurConfirmeeParServeur
-          ? `Envoi impossible (statut: ${erreur?.response?.status || 'inconnu'})`
-          : 'Connexion interrompue',
-        detail
-          ? JSON.stringify(detail)
-          : erreurConfirmeeParServeur
-            ? 'Le message n’a pas pu être envoyé. Vous pouvez réessayer.'
-            : 'Le message a peut-être été envoyé. Vérifiez la conversation lorsque la connexion sera rétablie.',
-      );
+      setMessages((precedent) => [...precedent, message]);
+      setTimeout(() => listeRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch {
+      setNouveauMessage(contenu); // on remet le texte si l'envoi a échoué
     } finally {
       setEnvoiEnCours(false);
     }
@@ -174,7 +69,7 @@ export default function ConversationScreen({ route, navigation }: any) {
           renderItem={({ item }) => {
             const estMoi = item.expediteur === utilisateur?.id;
             return (
-              <View style={[styles.bulle, estMoi ? styles.bulleMoi : styles.bulleAutre, item.enAttente && styles.bulleEnAttente]}>
+              <View style={[styles.bulle, estMoi ? styles.bulleMoi : styles.bulleAutre]}>
                 <Text style={estMoi ? styles.texteMoi : styles.texteAutre}>{item.contenu}</Text>
               </View>
             );
@@ -217,7 +112,6 @@ const styles = StyleSheet.create({
 
   bulle: { maxWidth: '75%', borderRadius: rayons.moyen, padding: espacements.sm, marginBottom: espacements.xs },
   bulleMoi: { backgroundColor: couleurs.bleuBase, alignSelf: 'flex-end' },
-  bulleEnAttente: { backgroundColor: 'rgba(30, 136, 229, 0.45)' },
   bulleAutre: { backgroundColor: couleurs.blanc, alignSelf: 'flex-start', borderWidth: 1, borderColor: couleurs.bordure },
   texteMoi: { color: couleurs.blanc, fontSize: 14 },
   texteAutre: { color: couleurs.tertiaire, fontSize: 14 },
