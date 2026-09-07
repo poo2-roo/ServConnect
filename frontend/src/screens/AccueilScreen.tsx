@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import CartePublication from '../components/CartePublication';
 import { recupererPublications } from '../services/publications';
 import { Publication } from '../types';
 import { couleurs } from '../theme/colors';
 import { espacements } from '../theme/styles';
+import { useAuth } from '../context/AuthContext';
 
-export default function AccueilScreen() {
+export default function AccueilScreen({ navigation }: any) {
   const [publications, setPublications] = useState<Publication[]>([]);
   const [chargement, setChargement] = useState(true);
   const [rafraichissement, setRafraichissement] = useState(false);
+    const { utilisateur } = useAuth();
 
   const charger = useCallback(async () => {
     try {
@@ -36,7 +38,13 @@ export default function AccueilScreen() {
   return (
     <View style={styles.conteneur}>
       <View style={styles.entete}>
-        <Ionicons name="menu" size={24} color={couleurs.tertiaire} />
+        {utilisateur?.a_profil_prestataire ? (
+          <TouchableOpacity onPress={() => navigation.navigate('CreerPublication')}>
+            <Ionicons name="add-circle-outline" size={26} color={couleurs.bleuBase} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 26 }} />
+        )}
         <Text style={styles.titre}>ServConnect</Text>
         <View style={{ width: 4 }} />
       </View>

@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import {
   mettreAJourPhoto, mettreAJourProfil, devenirPrestataireAvecCategories,
-  recupererMonProfilPrestataire, mettreAJourCategories,
+  recupererMonProfilPrestataire, mettreAJourCategories, modifierMonProfilPrestataire,
 } from '../services/profil';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements, stylesPartages } from '../theme/styles';
@@ -18,7 +18,7 @@ import SelecteurCategories from '../components/SelecteurCategories';
 
 const AVATAR_PLACEHOLDER = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&q=80';
 
-export default function ProfilScreen() {
+export default function ProfilScreen({ navigation }: any) {
   const { utilisateur, deconnexion, rafraichirUtilisateur } = useAuth();
   const [enEdition, setEnEdition] = useState(false);
   const [prenom, setPrenom] = useState(utilisateur?.first_name || '');
@@ -31,6 +31,11 @@ export default function ProfilScreen() {
   const [modificationCategories, setModificationCategories] = useState(false);
   const [categoriesEnEdition, setCategoriesEnEdition] = useState<number[]>([]);
   const [chargementCategories, setChargementCategories] = useState(false);
+
+  const [enEditionPrestataire, setEnEditionPrestataire] = useState(false);
+  const [nomEntrepriseEdit, setNomEntrepriseEdit] = useState('');
+  const [descriptionEdit, setDescriptionEdit] = useState('');
+  const [chargementEditionPrestataire, setChargementEditionPrestataire] = useState(false);
 
   // Formulaire "devenir prestataire"
   const [categoriesSelectionnees, setCategoriesSelectionnees] = useState<number[]>([]);
@@ -49,6 +54,13 @@ export default function ProfilScreen() {
         .catch(() => {});
     }
   }, [utilisateur?.a_profil_prestataire]);
+
+  useEffect(() => {
+    if (monPrestataire) {
+      setNomEntrepriseEdit(monPrestataire.nom_entreprise || '');
+      setDescriptionEdit(monPrestataire.description || '');
+    }
+  }, [monPrestataire]);
 
   async function handleChangerPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -80,6 +92,21 @@ export default function ProfilScreen() {
       Alert.alert('Erreur', 'Impossible de sauvegarder les modifications.');
     } finally {
       setChargementSauvegarde(false);
+    }
+  }
+
+  async function handleSauvegarderInfosPrestataire() {
+    setChargementEditionPrestataire(true);
+    try {
+      const misAJour = await modifierMonProfilPrestataire({
+        nom_entreprise: nomEntrepriseEdit, description: descriptionEdit,
+      });
+      setMonPrestataire(misAJour);
+      setEnEditionPrestataire(false);
+    } catch {
+      Alert.alert('Erreur', 'Impossible de mettre à jour les informations.');
+    } finally {
+      setChargementEditionPrestataire(false);
     }
   }
 
@@ -159,13 +186,13 @@ export default function ProfilScreen() {
           </View>
         </View>
       ) : (
-        <>
+        <View key="lecture-profil">
           <Text style={styles.nomComplet}>{utilisateur.first_name} {utilisateur.last_name}</Text>
           <Text style={styles.role}>@{utilisateur.username} • {utilisateur.role}</Text>
           <TouchableOpacity onPress={() => setEnEdition(true)}>
             <Text style={styles.lienModifier}>Modifier mes informations</Text>
           </TouchableOpacity>
-        </>
+        </View>
       )}
 
       <View style={styles.separateur} />
@@ -190,11 +217,43 @@ export default function ProfilScreen() {
       )}
 
       {utilisateur.a_profil_prestataire && (
-        <>
+        <View key="section-prestataire" style={{ width: '100%' }}>
+          <View style={styles.sectionCategories}>
+          <TouchableOpacity
+            style={[stylesPartages.boutonContour, { width: '100%', marginBottom: espacements.md }]}
+            onPress={() => navigation.navigate('Accueil', { screen: 'CreerPublication' })}
+          >
+            <Text style={stylesPartages.boutonContourTexte}>Créer une publication</Text>
+          </TouchableOpacity>
+            <Text style={styles.titreSection}>Mon activité</Text>
+            {enEditionPrestataire ? (
+              <View key="edition-activite">
+                <TextInput style={styles.champ} value={nomEntrepriseEdit} onChangeText={setNomEntrepriseEdit} placeholder="Nom de votre activité" />
+                <TextInput style={[styles.champ, { height: 80 }]} value={descriptionEdit} onChangeText={setDescriptionEdit} placeholder="Description" multiline />
+                <View style={styles.rangeeBoutons}>
+                  <TouchableOpacity style={[stylesPartages.boutonContour, { flex: 1 }]} onPress={() => setEnEditionPrestataire(false)}>
+                    <Text style={stylesPartages.boutonContourTexte}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[stylesPartages.boutonPrincipal, { flex: 1 }]} onPress={handleSauvegarderInfosPrestataire} disabled={chargementEditionPrestataire}>
+                    {chargementEditionPrestataire ? <ActivityIndicator color={couleurs.blanc} /> : <Text style={stylesPartages.boutonPrincipalTexte}>Enregistrer</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View key="lecture-activite">
+                <Text style={styles.nomEntrepriseAffiche}>{monPrestataire?.nom_entreprise || 'Nom non renseigné'}</Text>
+                <Text style={styles.descriptionAffichee}>{monPrestataire?.description || 'Aucune description.'}</Text>
+                <TouchableOpacity onPress={() => setEnEditionPrestataire(true)}>
+                  <Text style={styles.lienModifier}>Modifier</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
           <View style={styles.sectionCategories}>
             <Text style={styles.titreSection}>Mes catégories</Text>
             {modificationCategories ? (
-              <>
+              <View key="edition-categories">
                 <SelecteurCategories selection={categoriesEnEdition} onChange={setCategoriesEnEdition} />
                 <View style={styles.rangeeBoutons}>
                   <TouchableOpacity style={[stylesPartages.boutonContour, { flex: 1 }]} onPress={() => setModificationCategories(false)}>
@@ -204,9 +263,9 @@ export default function ProfilScreen() {
                     {chargementCategories ? <ActivityIndicator color={couleurs.blanc} /> : <Text style={stylesPartages.boutonPrincipalTexte}>Enregistrer</Text>}
                   </TouchableOpacity>
                 </View>
-              </>
+              </View>
             ) : (
-              <>
+              <View key="lecture-categories">
                 <View style={styles.rangeeCategoriesLecture}>
                   {monPrestataire?.categories.length ? (
                     monPrestataire.categories.map((c) => (
@@ -221,12 +280,12 @@ export default function ProfilScreen() {
                 <TouchableOpacity onPress={() => setModificationCategories(true)}>
                   <Text style={styles.lienModifier}>Modifier mes catégories</Text>
                 </TouchableOpacity>
-              </>
+              </View>
             )}
           </View>
 
           <KYCSection />
-        </>
+        </View>
       )}
 
       <TouchableOpacity style={styles.boutonDeconnexion} onPress={deconnexion}>
@@ -260,6 +319,9 @@ const styles = StyleSheet.create({
   },
   label: { fontWeight: '600', color: couleurs.tertiaire, marginBottom: espacements.xs, alignSelf: 'flex-start' },
   rangeeBoutons: { flexDirection: 'row', gap: espacements.sm },
+
+  nomEntrepriseAffiche: { fontSize: 15, fontWeight: '600', color: couleurs.tertiaire, marginBottom: 4 },
+  descriptionAffichee: { fontSize: 13, color: couleurs.neutre, marginBottom: espacements.xs, lineHeight: 18 },
 
   sectionCategories: { width: '100%', marginBottom: espacements.md },
   rangeeCategoriesLecture: { flexDirection: 'row', flexWrap: 'wrap', gap: espacements.xs, marginBottom: espacements.xs },

@@ -7,7 +7,7 @@ import { Categorie, Prestataire } from '../types';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements, stylesPartages } from '../theme/styles';
 
-export default function RechercherScreen() {
+export default function RechercherScreen({ navigation }: any) {
   const [recherche, setRecherche] = useState('');
   const [categories, setCategories] = useState<Categorie[]>([]);
   const [categorieActive, setCategorieActive] = useState<number | null>(null);
@@ -26,10 +26,12 @@ export default function RechercherScreen() {
     })();
   }, []);
 
-  const prestatairesFiltres = prestataires.filter((p) => {
+   const prestatairesFiltres = prestataires.filter((p) => {
     const correspondRecherche = recherche === '' ||
       p.nom_entreprise.toLowerCase().includes(recherche.toLowerCase());
-    return correspondRecherche;
+    const correspondCategorie = categorieActive === null ||
+      p.categories.some((c) => c.id === categorieActive);
+    return correspondRecherche && correspondCategorie;
   });
 
   return (
@@ -70,7 +72,12 @@ export default function RechercherScreen() {
         <FlatList
           data={prestatairesFiltres}
           keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => <CartePrestataire prestataire={item} />}
+          renderItem={({ item }) => (
+            <CartePrestataire
+              prestataire={item}
+              onVoirProfil={() => navigation.navigate('PrestataireDetail', { prestataireId: item.id })}
+            />
+          )}
           contentContainerStyle={styles.listePrestataires}
           ListEmptyComponent={<Text style={styles.vide}>Aucun prestataire trouvé.</Text>}
         />

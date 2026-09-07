@@ -45,3 +45,10 @@ export async function recupererMonProfilPrestataire(): Promise<Prestataire> {
   const reponse = await api.get<Prestataire>('/api/accounts/moi/prestataire/');
   return reponse.data;
 }
+
+export async function modifierMonProfilPrestataire(donnees: {
+  nom_entreprise?: string; description?: string; annees_experience?: number;
+}): Promise<Prestataire> {
+  const reponse = await api.patch<Prestataire>('/api/accounts/moi/prestataire/modifier/', donnees);
+  return reponse.data;
+}

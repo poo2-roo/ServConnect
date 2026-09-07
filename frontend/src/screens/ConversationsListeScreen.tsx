@@ -1,0 +1,97 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { Conversation } from '../types';
+import { couleurs } from '../theme/colors';
+import { rayons, espacements } from '../theme/styles';
+
+export default function ConversationsListeScreen({ navigation }: any) {
+  const { utilisateur } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const [rafraichissement, setRafraichissement] = useState(false);
+
+  const charger = useCallback(async () => {
+    try {
+      const reponse = await api.get<{ results?: Conversation[] } | Conversation[]>('/api/messaging/conversations/');
+      const donnees = Array.isArray(reponse.data) ? reponse.data : reponse.data.results || [];
+      setConversations(donnees);
+    } finally {
+      setChargement(false);
+      setRafraichissement(false);
+    }
+  }, []);
+
+  // Recharge la liste à chaque fois que cet écran redevient actif (pas seulement au premier montage)
+  useFocusEffect(
+    useCallback(() => {
+      charger();
+    }, [charger])
+  );
+
+  function handleOuvrir(conversation: any) {
+    const estPrestataire = utilisateur?.role === 'prestataire';
+    navigation.navigate('Conversation', {
+      conversationId: conversation.id,
+      nomInterlocuteur: estPrestataire ? conversation.client_nom : conversation.prestataire_nom,
+    });
+  }
+
+  return (
+    <View style={styles.conteneur}>
+      <Text style={styles.titre}>Messages</Text>
+
+      {chargement ? (
+        <ActivityIndicator style={{ marginTop: espacements.xl }} size="large" color={couleurs.bleuBase} />
+      ) : (
+        <FlatList
+          data={conversations}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.liste}
+          refreshControl={
+            <RefreshControl refreshing={rafraichissement} onRefresh={() => { setRafraichissement(true); charger(); }} colors={[couleurs.bleuBase]} />
+          }
+          renderItem={({ item }) => {
+            const estPrestataire = utilisateur?.role === 'prestataire';
+            const nom = estPrestataire ? item.client_nom : item.prestataire_nom;
+            return (
+              <TouchableOpacity style={styles.carte} onPress={() => handleOuvrir(item)}>
+                <View style={styles.avatar}>
+                  <Ionicons name="person" size={20} color={couleurs.neutre} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.nom}>{nom || 'Utilisateur'}</Text>
+                  <Text style={styles.derniereActivite}>
+                    {new Date(item.derniere_activite).toLocaleDateString('fr-FR')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={couleurs.neutre} />
+              </TouchableOpacity>
+            );
+          }}
+          ListEmptyComponent={<Text style={styles.vide}>Aucune conversation pour le moment.</Text>}
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  conteneur: { flex: 1, backgroundColor: couleurs.fond, paddingTop: espacements.xl },
+  titre: { fontSize: 20, fontWeight: 'bold', color: couleurs.tertiaire, paddingHorizontal: espacements.md, marginBottom: espacements.sm },
+  liste: { padding: espacements.md, paddingTop: 0 },
+  carte: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: couleurs.blanc,
+    borderRadius: rayons.moyen, padding: espacements.sm, marginBottom: espacements.xs, gap: espacements.sm,
+  },
+  avatar: {
+    width: 44, height: 44, borderRadius: rayons.rond, backgroundColor: couleurs.fond,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  nom: { fontWeight: '600', color: couleurs.tertiaire, fontSize: 14 },
+  derniereActivite: { fontSize: 12, color: couleurs.neutre, marginTop: 2 },
+  vide: { textAlign: 'center', color: couleurs.neutre, marginTop: espacements.xl },
+});

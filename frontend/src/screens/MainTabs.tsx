@@ -1,18 +1,27 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import AccueilScreen from '../screens/AccueilScreen';
-import RechercherScreen from '../screens/RechercherScreen';
-import PublicationsScreen from '../screens/PublicationsScreen';
 import ProfilScreen from '../screens/ProfilScreen';
 import { couleurs } from '../theme/colors';
+
+function AccueilScreen() {
+  return null;
+}
+
+function MessagesScreen() {
+  return null;
+}
+
+function RechercherScreen() {
+  return null;
+}
 
 const Tab = createBottomTabNavigator();
 
 const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
   Accueil: 'home',
   Rechercher: 'search',
-  Publications: 'newspaper',
+  Messages: 'chatbubbles',
   Profil: 'person',
 };
 
@@ -31,7 +40,7 @@ export default function MainTabs() {
     >
       <Tab.Screen name="Accueil" component={AccueilScreen} />
       <Tab.Screen name="Rechercher" component={RechercherScreen} />
-      <Tab.Screen name="Publications" component={PublicationsScreen} />
+      <Tab.Screen name="Messages" component={MessagesScreen} />
       <Tab.Screen name="Profil" component={ProfilScreen} />
     </Tab.Navigator>
   );

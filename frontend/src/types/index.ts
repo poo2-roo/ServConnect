@@ -53,3 +53,42 @@ export interface Prestataire {
   est_disponible: boolean;
   categories: { id: number; nom: string }[];
 }
+
+export interface Avis {
+  id: number;
+  client_nom: string;
+  note: number;
+  commentaire: string;
+  reponse_prestataire: string;
+  date_creation: string;
+}
+
+export interface Service {
+  id: number;
+  titre: string;
+  description: string;
+  prix_min: string;
+  prix_max: string | null;
+  unite_prix: string;
+  categorie_nom: string;
+}
+
+export interface Conversation {
+  id: number;
+  client: number;
+  prestataire: number;
+  prestataire_nom: string;
+  client_nom: string;
+  derniere_activite: string;
+}
+
+export interface Message {
+  id: number;
+  conversation: number;
+  expediteur: number;
+  expediteur_nom: string;
+  contenu: string;
+  est_suggestion_ia: boolean;
+  est_lu: boolean;
+  date_envoi: string;
+}

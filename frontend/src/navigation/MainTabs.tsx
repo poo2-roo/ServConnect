@@ -1,12 +1,11 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import AccueilScreen from '../screens/AccueilScreen';
-import RechercherScreen from '../screens/RechercherScreen';
+import AccueilStack from './AccueilStack';
 import PublicationsScreen from '../screens/PublicationsScreen';
 import ProfilScreen from '../screens/ProfilScreen';
 import { couleurs } from '../theme/colors';
-
+import RechercherStack from './RechercherStack';
 const Tab = createBottomTabNavigator();
 
 const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -29,10 +28,11 @@ export default function MainTabs() {
         ),
       })}
     >
-      <Tab.Screen name="Accueil" component={AccueilScreen} />
-      <Tab.Screen name="Rechercher" component={RechercherScreen} />
+      <Tab.Screen name="Accueil" component={AccueilStack} />
+       <Tab.Screen name="Rechercher" component={RechercherStack} />
       <Tab.Screen name="Publications" component={PublicationsScreen} />
       <Tab.Screen name="Profil" component={ProfilScreen} />
+      
     </Tab.Navigator>
   );
 }

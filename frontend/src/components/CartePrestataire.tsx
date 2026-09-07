@@ -7,7 +7,7 @@ import { rayons, espacements, stylesPartages } from '../theme/styles';
 
 const AVATAR_PLACEHOLDER = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&q=80';
 
-export default function CartePrestataire({ prestataire }: { prestataire: Prestataire }) {
+export default function CartePrestataire({ prestataire, onVoirProfil }: { prestataire: Prestataire; onVoirProfil: () => void }) {
   const note = parseFloat(prestataire.note_moyenne || '0');
 
   return (
@@ -32,7 +32,7 @@ export default function CartePrestataire({ prestataire }: { prestataire: Prestat
         <TouchableOpacity style={stylesPartages.boutonContour}>
           <Text style={stylesPartages.boutonContourTexte}>Message</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.boutonProfil}>
+        <TouchableOpacity style={styles.boutonProfil} onPress={onVoirProfil}>
           <Text style={styles.boutonProfilTexte}>Voir le profil</Text>
         </TouchableOpacity>
       </View>
