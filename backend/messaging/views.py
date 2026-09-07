@@ -70,6 +70,7 @@ class MessageListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         conversation = self.get_conversation()
+        conversation.messages.filter(est_lu=False).exclude(expediteur=self.request.user).update(est_lu=True)
         return conversation.messages.select_related('expediteur')
 
     def perform_create(self, serializer):

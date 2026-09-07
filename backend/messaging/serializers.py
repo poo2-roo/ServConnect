@@ -19,15 +19,22 @@ class ConversationSerializer(serializers.ModelSerializer):
     client_nom = serializers.CharField(source='client.utilisateur.get_full_name', read_only=True)
     prestataire_nom = serializers.CharField(source='prestataire.nom_entreprise', read_only=True)
     dernier_message = serializers.SerializerMethodField()
+    messages_non_lus = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = [
             'id', 'client', 'client_nom', 'prestataire', 'prestataire_nom',
-            'service', 'date_creation', 'derniere_activite', 'dernier_message',
+            'service', 'date_creation', 'derniere_activite', 'dernier_message', 'messages_non_lus',
         ]
         read_only_fields = ['client', 'date_creation', 'derniere_activite']
 
     def get_dernier_message(self, obj):
         dernier = obj.messages.order_by('-date_envoi').first()
         return MessageSerializer(dernier).data if dernier else None
+
+    def get_messages_non_lus(self, obj):
+        request = self.context.get('request')
+        if request is None or not request.user.is_authenticated:
+            return 0
+        return obj.messages.filter(est_lu=False).exclude(expediteur=request.user).count()
