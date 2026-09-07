@@ -1,20 +1,11 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import AccueilStack from '../navigation/AccueilStack';
+import RechercherStack from '../navigation/RechercherStack';
+import MessagesStack from '../navigation/MessagesStack';
 import ProfilScreen from '../screens/ProfilScreen';
 import { couleurs } from '../theme/colors';
-
-function AccueilScreen() {
-  return null;
-}
-
-function MessagesScreen() {
-  return null;
-}
-
-function RechercherScreen() {
-  return null;
-}
 
 const Tab = createBottomTabNavigator();
 
@@ -38,9 +29,9 @@ export default function MainTabs() {
         ),
       })}
     >
-      <Tab.Screen name="Accueil" component={AccueilScreen} />
-      <Tab.Screen name="Rechercher" component={RechercherScreen} />
-      <Tab.Screen name="Messages" component={MessagesScreen} />
+      <Tab.Screen name="Accueil" component={AccueilStack} />
+      <Tab.Screen name="Rechercher" component={RechercherStack} />
+      <Tab.Screen name="Messages" component={MessagesStack} />
       <Tab.Screen name="Profil" component={ProfilScreen} />
     </Tab.Navigator>
   );

@@ -2,11 +2,11 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 const BASE_URL = 'https://servconnect-production.up.railway.app';
-const NOMBRE_TENTATIVES_MAX = 3;
+const NOMBRE_TENTATIVES_MAX = 5;
 
 export const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 30000,
 });
 
 // Ajoute automatiquement le token JWT à chaque requête, si disponible
