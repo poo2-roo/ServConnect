@@ -73,10 +73,8 @@ class MessageListCreateView(generics.ListCreateAPIView):
         return conversation.messages.select_related('expediteur')
 
     def perform_create(self, serializer):
-        client = getattr(self.request.user, 'profil_client', None)
-        if client is None:
-            raise PermissionDenied("Seul un compte client peut démarrer une conversation.")
-        serializer.save(expediteur=self.request.user)
+        conversation = self.get_conversation()
+        serializer.save(conversation=conversation, expediteur=self.request.user)
 
     def get_permissions(self):
         return [permissions.IsAuthenticated(), EstParticipant()]
