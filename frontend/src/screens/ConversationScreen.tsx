@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { recupererMessages, envoyerMessage } from '../services/messagerie';
 import { Message } from '../types';
@@ -18,19 +19,28 @@ export default function ConversationScreen({ route, navigation }: any) {
   const [chargement, setChargement] = useState(true);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const listeRef = useRef<FlatList>(null);
+  const chargementEnCours = useRef(false);
 
-  async function charger() {
+  const charger = useCallback(async () => {
+    if (chargementEnCours.current) return;
+    chargementEnCours.current = true;
     try {
       const donnees = await recupererMessages(conversationId);
       setMessages(donnees);
     } finally {
       setChargement(false);
+      chargementEnCours.current = false;
     }
-  }
-
-  useEffect(() => {
-    charger();
   }, [conversationId]);
+
+  useFocusEffect(
+    useCallback(() => {
+    charger();
+    const intervalle = setInterval(charger, 3000);
+
+    return () => clearInterval(intervalle);
+    }, [charger])
+  );
 
   async function handleEnvoyer() {
     if (!nouveauMessage.trim()) return;

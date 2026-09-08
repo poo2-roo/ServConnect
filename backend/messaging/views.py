@@ -76,6 +76,7 @@ class MessageListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         conversation = self.get_conversation()
         serializer.save(conversation=conversation, expediteur=self.request.user)
+        conversation.save(update_fields=['derniere_activite'])
 
     def get_permissions(self):
         return [permissions.IsAuthenticated(), EstParticipant()]

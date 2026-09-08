@@ -18,7 +18,13 @@ export default function ConversationsListeScreen({ navigation }: any) {
     try {
       const reponse = await api.get<{ results?: Conversation[] } | Conversation[]>('/api/messaging/conversations/');
       const donnees = Array.isArray(reponse.data) ? reponse.data : reponse.data.results || [];
-      setConversations(donnees);
+      setConversations(
+        [...donnees].sort(
+          (conversationA, conversationB) =>
+            new Date(conversationB.derniere_activite).getTime() -
+            new Date(conversationA.derniere_activite).getTime()
+        )
+      );
     } finally {
       setChargement(false);
       setRafraichissement(false);
@@ -67,6 +73,7 @@ export default function ConversationsListeScreen({ navigation }: any) {
                     {new Date(item.derniere_activite).toLocaleDateString('fr-FR')}
                   </Text>
                 </View>
+                {item.messages_non_lus > 0 && <View style={styles.pointNonLu} />}
                 <Ionicons name="chevron-forward" size={18} color={couleurs.neutre} />
               </TouchableOpacity>
             );
@@ -92,5 +99,6 @@ const styles = StyleSheet.create({
   },
   nom: { fontWeight: '600', color: couleurs.tertiaire, fontSize: 14 },
   derniereActivite: { fontSize: 12, color: couleurs.neutre, marginTop: 2 },
+  pointNonLu: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#D32F2F' },
   vide: { textAlign: 'center', color: couleurs.neutre, marginTop: espacements.xl },
 });
