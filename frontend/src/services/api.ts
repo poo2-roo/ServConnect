@@ -30,6 +30,11 @@ function attendre(ms: number) {
 api.interceptors.response.use(
   (reponse) => reponse,
   async (erreur) => {
+    if (erreur.response?.status === 401) {
+      await SecureStore.deleteItemAsync('access_token');
+      await SecureStore.deleteItemAsync('refresh_token');
+    }
+
     const config = erreur.config;
     const estErreurReseau = erreur.code === 'ERR_NETWORK' || erreur.code === 'ECONNABORTED';
     const estLectureSeule = config?.method?.toLowerCase() === 'get';

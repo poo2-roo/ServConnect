@@ -8,7 +8,7 @@ import { basculerLike } from '../services/publications';
 
 const IMAGE_PLACEHOLDER = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500&q=80';
 
-export default function CartePublication({ publication }: { publication: Publication }) {
+export default function CartePublication({ publication, onPress }: { publication: Publication; onPress: () => void }) {
   const [aime, setAime] = useState(publication.jaime_deja);
   const [nombreLikes, setNombreLikes] = useState(publication.nombre_likes);
 
@@ -30,7 +30,7 @@ export default function CartePublication({ publication }: { publication: Publica
   const note = parseFloat(publication.prestataire_note || '0');
 
   return (
-    <View style={stylesPartages.carte}>
+    <TouchableOpacity style={stylesPartages.carte} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.entete}>
         <Image
           source={{ uri: publication.prestataire_avatar || IMAGE_PLACEHOLDER }}
@@ -68,7 +68,7 @@ export default function CartePublication({ publication }: { publication: Publica
       <TouchableOpacity style={styles.boutonProfil}>
         <Text style={styles.boutonProfilTexte}>Voir le profil</Text>
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 }
 

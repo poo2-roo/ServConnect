@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { recupererPrestataire, recupererAvisPrestataire, recupererServicesPrestataire } from '../services/prestataireDetail';
 import { Prestataire, Avis, Service } from '../types';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements, stylesPartages } from '../theme/styles';
 import { creerConversation } from '../services/messagerie';
+import { laisserAvis } from '../services/prestataireDetail';
+import SelecteurEtoiles from '../components/SelecteurEtoiles';
+import { useAuth } from '../context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
 
 const AVATAR_PLACEHOLDER = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&q=80';
 
@@ -16,6 +20,10 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
   const [services, setServices] = useState<Service[]>([]);
   const [chargement, setChargement] = useState(true);
     const [creationConversation, setCreationConversation] = useState(false);
+  const [afficherFormAvis, setAfficherFormAvis] = useState(false);
+  const [noteChoisie, setNoteChoisie] = useState(0);
+  const [commentaireAvis, setCommentaireAvis] = useState('');
+  const [envoiAvisEnCours, setEnvoiAvisEnCours] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -48,6 +56,26 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
         <Text style={{ color: couleurs.neutre }}>Prestataire introuvable.</Text>
       </View>
     );
+  }
+
+  async function handleEnvoyerAvis() {
+    if (noteChoisie === 0) {
+      Alert.alert('Note manquante', 'Merci de choisir une note avant de valider.');
+      return;
+    }
+    setEnvoiAvisEnCours(true);
+    try {
+      const nouvelAvis = await laisserAvis(prestataireId, noteChoisie, commentaireAvis);
+      setAvis((precedent) => [nouvelAvis, ...precedent]);
+      setAfficherFormAvis(false);
+      setNoteChoisie(0);
+      setCommentaireAvis('');
+    } catch (erreur: any) {
+      const detail = erreur?.response?.data;
+      Alert.alert('Erreur', detail ? JSON.stringify(detail) : "Impossible d'envoyer votre avis.");
+    } finally {
+      setEnvoiAvisEnCours(false);
+    }
   }
 
   async function handleEnvoyerMessage() {
@@ -124,6 +152,32 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
         ))
       )}
 
+      {!afficherFormAvis ? (
+        <TouchableOpacity style={stylesPartages.boutonContour} onPress={() => setAfficherFormAvis(true)}>
+          <Text style={stylesPartages.boutonContourTexte}>Laisser un avis</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.formAvis}>
+          <SelecteurEtoiles note={noteChoisie} onChange={setNoteChoisie} />
+          <TextInput
+            style={styles.champAvis}
+            placeholder="Votre commentaire (optionnel)"
+            placeholderTextColor={couleurs.neutre}
+            value={commentaireAvis}
+            onChangeText={setCommentaireAvis}
+            multiline
+          />
+          <View style={styles.rangeeBoutonsAvis}>
+            <TouchableOpacity style={[stylesPartages.boutonContour, { flex: 1 }]} onPress={() => setAfficherFormAvis(false)}>
+              <Text style={stylesPartages.boutonContourTexte}>Annuler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[stylesPartages.boutonPrincipal, { flex: 1 }]} onPress={handleEnvoyerAvis} disabled={envoiAvisEnCours}>
+              {envoiAvisEnCours ? <ActivityIndicator color={couleurs.blanc} /> : <Text style={stylesPartages.boutonPrincipalTexte}>Envoyer</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       <Text style={styles.titreSection}>Avis clients</Text>
       {avis.length === 0 ? (
         <Text style={styles.videTexte}>Aucun avis pour le moment.</Text>
@@ -155,7 +209,12 @@ const styles = StyleSheet.create({
   centre: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: couleurs.fond },
   scroll: { padding: espacements.md, paddingTop: espacements.xl, alignItems: 'center' },
   boutonRetour: { alignSelf: 'flex-start', marginBottom: espacements.sm },
-
+  formAvis: { width: '100%', marginBottom: espacements.md },
+  champAvis: {
+    borderWidth: 1, borderColor: couleurs.bordure, borderRadius: rayons.moyen,
+    padding: espacements.sm, fontSize: 14, backgroundColor: couleurs.blanc, minHeight: 60, marginBottom: espacements.sm,
+  },
+  rangeeBoutonsAvis: { flexDirection: 'row', gap: espacements.sm },
   avatar: { width: 90, height: 90, borderRadius: rayons.rond, backgroundColor: couleurs.bordure, marginBottom: espacements.sm },
   nom: { fontSize: 20, fontWeight: 'bold', color: couleurs.tertiaire, textAlign: 'center' },
 

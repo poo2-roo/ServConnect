@@ -17,3 +17,15 @@ export async function envoyerMessage(conversationId: number, contenu: string): P
   const reponse = await api.post<Message>(`/api/messaging/conversations/${conversationId}/messages/`, { contenu });
   return reponse.data;
 }
+
+export interface SuggestionReponse {
+  ton: string;
+  texte: string;
+}
+
+export async function recupererSuggestions(conversationId: number): Promise<SuggestionReponse[]> {
+  const reponse = await api.get<{ suggestions: SuggestionReponse[] }>(
+    `/api/messaging/conversations/${conversationId}/suggestions/`
+  );
+  return reponse.data.suggestions;
+}

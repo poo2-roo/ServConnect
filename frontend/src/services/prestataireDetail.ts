@@ -19,3 +19,8 @@ export async function recupererServicesPrestataire(id: number): Promise<Service[
   });
   return Array.isArray(reponse.data) ? reponse.data : reponse.data.results || [];
 }
+
+export async function laisserAvis(prestataireId: number, note: number, commentaire: string): Promise<Avis> {
+  const reponse = await api.post<Avis>('/api/reviews/avis/', { prestataire: prestataireId, note, commentaire });
+  return reponse.data;
+}

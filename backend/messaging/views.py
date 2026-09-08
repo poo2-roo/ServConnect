@@ -124,8 +124,11 @@ class ConversationSuggestionsView(APIView):
         conversation = get_object_or_404(Conversation, pk=conversation_id)
 
         prestataire = getattr(request.user, 'profil_prestataire', None)
-        if prestataire is None or conversation.prestataire != prestataire:
-            raise PermissionDenied("Seul le prestataire de cette conversation peut voir des suggestions.")
+        if prestataire is None or (
+            conversation.prestataire != prestataire
+            and conversation.prestataire_initiateur != prestataire
+        ):
+            raise PermissionDenied("Seul un prestataire participant peut voir des suggestions.")
 
         try:
             suggestions = suggerer_reponses(conversation, utilisateur=request.user)

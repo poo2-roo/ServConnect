@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import CartePublication from '../components/CartePublication';
@@ -55,7 +55,15 @@ export default function AccueilScreen({ navigation }: any) {
         <FlatList
           data={publications}
           keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => <CartePublication publication={item} />}
+          renderItem={({ item }) => (
+            <CartePublication
+              publication={item}
+              onPress={() => navigation.navigate('Rechercher', {
+                screen: 'PrestataireDetail',
+                params: { prestataireId: item.prestataire },
+              })}
+            />
+          )}
           contentContainerStyle={styles.liste}
           refreshControl={
             <RefreshControl refreshing={rafraichissement} onRefresh={handleRafraichir} colors={[couleurs.bleuBase]} />

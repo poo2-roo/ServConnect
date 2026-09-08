@@ -105,3 +105,4 @@ export const stylesPartages = StyleSheet.create({
     marginLeft: 6,
   },
 });
+

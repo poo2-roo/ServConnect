@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
@@ -13,8 +13,10 @@ export default function ConversationsListeScreen({ navigation }: any) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [chargement, setChargement] = useState(true);
   const [rafraichissement, setRafraichissement] = useState(false);
+  const [erreurChargement, setErreurChargement] = useState(false);
 
   const charger = useCallback(async () => {
+    setErreurChargement(false);
     try {
       const reponse = await api.get<{ results?: Conversation[] } | Conversation[]>('/api/messaging/conversations/');
       const donnees = Array.isArray(reponse.data) ? reponse.data : reponse.data.results || [];
@@ -25,6 +27,11 @@ export default function ConversationsListeScreen({ navigation }: any) {
             new Date(conversationA.derniere_activite).getTime()
         )
       );
+    } catch (erreur: any) {
+      setErreurChargement(true);
+      if (erreur?.response?.status === 401) {
+        Alert.alert('Session expirée', 'Reconnectez-vous pour consulter vos conversations.');
+      }
     } finally {
       setChargement(false);
       setRafraichissement(false);
@@ -57,6 +64,13 @@ export default function ConversationsListeScreen({ navigation }: any) {
 
       {chargement ? (
         <ActivityIndicator style={{ marginTop: espacements.xl }} size="large" color={couleurs.bleuBase} />
+      ) : erreurChargement && conversations.length === 0 ? (
+        <View style={styles.etatErreur}>
+          <Text style={styles.vide}>Impossible de charger les conversations.</Text>
+          <TouchableOpacity style={styles.boutonReessayer} onPress={charger}>
+            <Text style={styles.boutonReessayerTexte}>Réessayer</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={conversations}
@@ -121,4 +135,7 @@ const styles = StyleSheet.create({
   derniereActivite: { fontSize: 12, color: couleurs.neutre, marginTop: 2 },
   pointNonLu: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#D32F2F' },
   vide: { textAlign: 'center', color: couleurs.neutre, marginTop: espacements.xl },
+  etatErreur: { alignItems: 'center', marginTop: espacements.xl },
+  boutonReessayer: { marginTop: espacements.sm, backgroundColor: couleurs.bleuBase, borderRadius: rayons.moyen, paddingVertical: 8, paddingHorizontal: 16 },
+  boutonReessayerTexte: { color: couleurs.blanc, fontWeight: '600' },
 });
