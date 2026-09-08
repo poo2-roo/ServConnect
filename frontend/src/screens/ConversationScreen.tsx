@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, KeyboardAvoidingView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -41,8 +41,13 @@ export default function ConversationScreen({ route, navigation }: any) {
       const message = await envoyerMessage(conversationId, contenu);
       setMessages((precedent) => [...precedent, message]);
       setTimeout(() => listeRef.current?.scrollToEnd({ animated: true }), 100);
-    } catch {
+    } catch (erreur: any) {
       setNouveauMessage(contenu); // on remet le texte si l'envoi a échoué
+      const detail = erreur?.response?.data;
+      Alert.alert(
+        'Envoi impossible',
+        detail ? JSON.stringify(detail) : 'Vérifiez votre connexion et réessayez.',
+      );
     } finally {
       setEnvoiEnCours(false);
     }
