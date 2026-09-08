@@ -47,6 +47,10 @@ class ConversationListCreateView(generics.ListCreateAPIView):
 
         client = getattr(request.user, 'profil_client', None)
         prestataire_initiateur = getattr(request.user, 'profil_prestataire', None)
+        est_prestataire = request.user.role == 'prestataire'
+        if est_prestataire:
+            client = None
+
         if client is None and prestataire_initiateur is None:
             raise PermissionDenied("Seul un client ou un prestataire peut démarrer une conversation.")
 

@@ -49,7 +49,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(photo.url) if request else photo.url
 
     def get_client_avatar(self, obj):
-        return self._get_avatar_url(obj.client.utilisateur)
+        return self._get_avatar_url(obj.client.utilisateur) if obj.client else None
 
     def get_prestataire_avatar(self, obj):
         return self._get_avatar_url(obj.prestataire.utilisateur)
