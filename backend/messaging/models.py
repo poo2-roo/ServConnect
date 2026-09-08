@@ -6,10 +6,15 @@ class Conversation(models.Model):
     """Fil de discussion entre un client et un prestataire, autour d'un service."""
 
     client = models.ForeignKey(
-        'accounts.Client', on_delete=models.CASCADE, related_name='conversations'
+        'accounts.Client', on_delete=models.CASCADE, related_name='conversations',
+        blank=True, null=True,
     )
     prestataire = models.ForeignKey(
         'accounts.Prestataire', on_delete=models.CASCADE, related_name='conversations'
+    )
+    prestataire_initiateur = models.ForeignKey(
+        'accounts.Prestataire', on_delete=models.CASCADE,
+        related_name='conversations_initiees', blank=True, null=True,
     )
     service = models.ForeignKey(
         'services.Service', on_delete=models.SET_NULL,
@@ -26,6 +31,14 @@ class Conversation(models.Model):
             models.UniqueConstraint(
                 fields=['client', 'prestataire'],
                 name='unique_conversation_client_prestataire',
+            ),
+            models.UniqueConstraint(
+                fields=['prestataire_initiateur', 'prestataire'],
+                condition=models.Q(
+                    client__isnull=True,
+                    prestataire_initiateur__isnull=False,
+                ),
+                name='unique_conversation_prestataires',
             ),
         ]
 

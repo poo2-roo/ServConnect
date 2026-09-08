@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
@@ -39,9 +39,15 @@ export default function ConversationsListeScreen({ navigation }: any) {
 
   function handleOuvrir(conversation: Conversation) {
     const estPrestataire = utilisateur?.role === 'prestataire';
+    const nomInterlocuteur = estPrestataire
+      ? conversation.client_nom
+        || (conversation.prestataire_initiateur === utilisateur.id
+          ? conversation.prestataire_nom
+          : conversation.prestataire_initiateur_nom)
+      : conversation.prestataire_nom;
     navigation.navigate('Conversation', {
       conversationId: conversation.id,
-      nomInterlocuteur: estPrestataire ? conversation.client_nom : conversation.prestataire_nom,
+      nomInterlocuteur: nomInterlocuteur || 'Utilisateur',
     });
   }
 
@@ -61,12 +67,26 @@ export default function ConversationsListeScreen({ navigation }: any) {
           }
           renderItem={({ item }) => {
             const estPrestataire = utilisateur?.role === 'prestataire';
-            const nom = estPrestataire ? item.client_nom : item.prestataire_nom;
+            const conversationEntrePrestataires = estPrestataire && !item.client;
+            const interlocuteurEstInitiateur = conversationEntrePrestataires
+              && item.prestataire_initiateur !== utilisateur.id;
+            const nom = estPrestataire
+              ? item.client_nom
+                || (interlocuteurEstInitiateur ? item.prestataire_initiateur_nom : item.prestataire_nom)
+              : item.prestataire_nom;
+            const avatar = estPrestataire
+              ? item.client_avatar
+                || (interlocuteurEstInitiateur ? item.prestataire_initiateur_avatar : item.prestataire_avatar)
+              : item.prestataire_avatar;
             return (
               <TouchableOpacity style={styles.carte} onPress={() => handleOuvrir(item)}>
-                <View style={styles.avatar}>
-                  <Ionicons name="person" size={20} color={couleurs.neutre} />
-                </View>
+                {avatar ? (
+                  <Image source={{ uri: avatar }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Ionicons name="person" size={20} color={couleurs.neutre} />
+                  </View>
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.nom}>{nom || 'Utilisateur'}</Text>
                   <Text style={styles.derniereActivite}>

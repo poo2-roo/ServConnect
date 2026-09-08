@@ -81,6 +81,9 @@ export interface Conversation {
   prestataire_avatar: string | null;
   client_nom: string;
   client_avatar: string | null;
+  prestataire_initiateur: number | null;
+  prestataire_initiateur_nom: string | null;
+  prestataire_initiateur_avatar: string | null;
   derniere_activite: string;
   messages_non_lus: number;
 }

@@ -13,7 +13,11 @@ class EstParticipant(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         client = getattr(request.user, 'profil_client', None)
         prestataire = getattr(request.user, 'profil_prestataire', None)
-        return obj.client == client or obj.prestataire == prestataire
+        return (
+            obj.client == client
+            or obj.prestataire == prestataire
+            or obj.prestataire_initiateur == prestataire
+        )
 
 
 class ConversationListCreateView(generics.ListCreateAPIView):
@@ -29,20 +33,39 @@ class ConversationListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         return Conversation.objects.filter(
-            Q(client__utilisateur=user) | Q(prestataire__utilisateur=user)
-        ).select_related('client__utilisateur', 'prestataire')
+            Q(client__utilisateur=user)
+            | Q(prestataire__utilisateur=user)
+            | Q(prestataire_initiateur__utilisateur=user)
+        ).select_related(
+            'client__utilisateur', 'prestataire__utilisateur',
+            'prestataire_initiateur__utilisateur',
+        )
 
     def create(self, request, *args, **kwargs):
-        client = getattr(request.user, 'profil_client', None)
-        if client is None:
-            raise PermissionDenied("Seul un compte client peut démarrer une conversation.")
-
         prestataire_id = request.data.get('prestataire')
         service_id = request.data.get('service')
 
+        client = getattr(request.user, 'profil_client', None)
+        prestataire_initiateur = getattr(request.user, 'profil_prestataire', None)
+        if client is None and prestataire_initiateur is None:
+            raise PermissionDenied("Seul un client ou un prestataire peut démarrer une conversation.")
+
+        if client is not None:
+            filtres = {'client': client, 'prestataire_id': prestataire_id}
+            defaults = {'service_id': service_id} if service_id else {}
+        else:
+            if str(prestataire_initiateur.id) == str(prestataire_id):
+                raise PermissionDenied("Vous ne pouvez pas démarrer une conversation avec vous-même.")
+            filtres = {
+                'client': None,
+                'prestataire_id': prestataire_id,
+                'prestataire_initiateur': prestataire_initiateur,
+            }
+            defaults = {}
+
         conversation, cree = Conversation.objects.get_or_create(
-            client=client, prestataire_id=prestataire_id,
-            defaults={'service_id': service_id} if service_id else {},
+            defaults=defaults,
+            **filtres,
         )
 
         serializer = self.get_serializer(conversation)
