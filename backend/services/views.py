@@ -220,3 +220,21 @@ class AdminCategorieDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Categorie.objects.all()
     serializer_class = CategorieSerializer
     permission_classes = [EstAdministrateur]
+
+class AssistantRechercheView(APIView):
+    """POST /api/services/assistant-recherche/ — chat IA pour trouver une categorie."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        message = request.data.get('message', '')
+        if not message.strip():
+            return Response({"detail": "Le champ 'message' est obligatoire."}, status=400)
+
+        from ai_services.assistant_recherche import trouver_categorie
+        try:
+            resultat = trouver_categorie(message, list(Categorie.objects.all()), utilisateur=request.user)
+        except ErreurAppelIA as exc:
+            return Response({"detail": str(exc)}, status=502)
+
+        return Response(resultat)

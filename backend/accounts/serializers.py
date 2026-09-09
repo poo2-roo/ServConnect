@@ -151,3 +151,9 @@ class DevenirPrestataireSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prestataire
         fields = ['nom_entreprise', 'description', 'annees_experience', 'categories']
+
+
+class ClientLocalisationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Client
+        fields = ['latitude', 'longitude', 'adresse_habituelle']

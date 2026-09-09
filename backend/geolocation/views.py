@@ -149,3 +149,21 @@ class LocalisationETAView(APIView):
             return Response({"detail": str(exc)}, status=502)
 
         return Response(resultat)
+
+
+class LocalisationListCreateView(generics.ListCreateAPIView):
+    serializer_class = LocalisationSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        queryset = Localisation.objects.all()
+        prestataire_id = self.request.query_params.get('prestataire')
+        if prestataire_id:
+            queryset = queryset.filter(prestataire_id=prestataire_id)
+        return queryset
+
+    def perform_create(self, serializer):
+        prestataire = getattr(self.request.user, 'profil_prestataire', None)
+        if prestataire is None:
+            raise PermissionDenied("Seul un compte prestataire peut déclarer une structure.")
+        serializer.save(prestataire=prestataire)        

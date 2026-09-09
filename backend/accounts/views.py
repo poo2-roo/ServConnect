@@ -4,6 +4,7 @@ from rest_framework.exceptions import PermissionDenied
 
 from .models import Client, Prestataire, Utilisateur
 from .serializers import (
+    ClientLocalisationSerializer,
     ClientSerializer,
     DevenirPrestataireSerializer,
     InscriptionSerializer,
@@ -245,3 +246,16 @@ class MonProfilPrestataireUpdateView(generics.UpdateAPIView):
         if prestataire is None:
             raise PermissionDenied("Vous n'avez pas de profil prestataire.")
         return prestataire
+
+
+class ClientLocalisationUpdateView(generics.UpdateAPIView):
+    """PATCH /api/accounts/moi/localisation/ — modifier la position par defaut du client."""
+
+    serializer_class = ClientLocalisationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        client = getattr(self.request.user, 'profil_client', None)
+        if client is None:
+            raise PermissionDenied("Vous n'avez pas de profil client.")
+        return client    
