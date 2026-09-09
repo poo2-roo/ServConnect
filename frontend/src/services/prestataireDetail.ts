@@ -24,3 +24,16 @@ export async function laisserAvis(prestataireId: number, note: number, commentai
   const reponse = await api.post<Avis>('/api/reviews/avis/', { prestataire: prestataireId, note, commentaire });
   return reponse.data;
 }
+
+export async function recupererLocalisationPrestataire(prestataireId: number) {
+  const r = await api.get<{ results?: any[] } | any[]>('/api/geolocation/localisations/', {
+    params: { prestataire: prestataireId },
+  });
+  const donnees = Array.isArray(r.data) ? r.data : r.data.results || [];
+  return donnees[0] || null;
+}
+
+export async function recupererETA(localisationId: number, lat: number, lon: number) {
+  const r = await api.get(`/api/geolocation/localisations/${localisationId}/eta/`, { params: { lat, lon } });
+  return r.data;
+}

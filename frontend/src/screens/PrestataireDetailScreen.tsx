@@ -10,6 +10,9 @@ import { laisserAvis } from '../services/prestataireDetail';
 import SelecteurEtoiles from '../components/SelecteurEtoiles';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { WebView } from 'react-native-webview';
+import * as Location from 'expo-location';
+import { recupererLocalisationPrestataire, recupererETA } from '../services/prestataireDetail';
 
 const AVATAR_PLACEHOLDER = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&q=80';
 
@@ -24,7 +27,9 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
   const [noteChoisie, setNoteChoisie] = useState(0);
   const [commentaireAvis, setCommentaireAvis] = useState('');
   const [envoiAvisEnCours, setEnvoiAvisEnCours] = useState(false);
-
+  const [eta, setEta] = useState<any>(null);
+  const [htmlCarteTrajet, setHtmlCarteTrajet] = useState<string | null>(null);
+  const [chargementEta, setChargementEta] = useState(true);
   useEffect(() => {
     (async () => {
       try {
@@ -41,7 +46,44 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
       }
     })();
   }, [prestataireId]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const localisation = await recupererLocalisationPrestataire(prestataireId);
+        if (!localisation) { setChargementEta(false); return; }
 
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') { setChargementEta(false); return; }
+
+        const position = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = position.coords;
+        const [lonP, latP] = localisation.geometry.coordinates;
+
+        const resultatEta = await recupererETA(localisation.id, latitude, longitude);
+        setEta(resultatEta);
+
+        setHtmlCarteTrajet(`
+<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>html,body,#c{height:100%;margin:0;padding:0;}</style></head>
+<body><div id="c"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const map = L.map('c');
+  const pts = [[${latitude},${longitude}],[${latP},${lonP}]];
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  L.marker(pts[0]).addTo(map).bindPopup('Vous');
+  L.marker(pts[1]).addTo(map).bindPopup('Prestataire');
+  L.polyline(pts, {color:'#0F62FE'}).addTo(map);
+  map.fitBounds(pts, {padding:[30,30]});
+</script></body></html>`);
+      } catch {
+        // silencieux : l'itineraire est une info secondaire, pas bloquante
+      } finally {
+        setChargementEta(false);
+      }
+    })();
+  }, [prestataireId]);
   if (chargement) {
     return (
       <View style={styles.centre}>
@@ -200,6 +242,20 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
           </View>
         ))
       )}
+      {!chargementEta && eta && (
+        <View style={styles.blocEta}>
+          <Text style={styles.titreSection}>Itinéraire estimé</Text>
+          <Text style={styles.etaTexte}>
+            {eta.distance_km} km · environ {eta.eta_minutes_min}-{eta.eta_minutes_max} min
+          </Text>
+          <Text style={styles.etaAvertissement}>{eta.avertissement}</Text>
+          {htmlCarteTrajet && (
+            <View style={styles.carteTrajetConteneur}>
+              <WebView source={{ html: htmlCarteTrajet }} />
+            </View>
+          )}
+        </View>
+      )}      
     </ScrollView>
   );
 }
@@ -225,6 +281,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', backgroundColor: couleurs.secondaire,
     borderRadius: rayons.rond, paddingVertical: 2, paddingHorizontal: 8, marginLeft: espacements.xs, gap: 3,
   },
+  blocEta: { width: '100%', marginTop: espacements.lg },
+  etaTexte: { fontSize: 15, fontWeight: '600', color: couleurs.tertiaire },
+  etaAvertissement: { fontSize: 11, color: couleurs.neutre, marginBottom: espacements.sm, fontStyle: 'italic' },
+  carteTrajetConteneur: { width: '100%', height: 180, borderRadius: rayons.moyen, overflow: 'hidden' },  
   badgeVerifieTexte: { color: couleurs.blanc, fontSize: 10, fontWeight: '600' },
 
   rangeeCategories: { flexDirection: 'row', flexWrap: 'wrap', gap: espacements.xs, marginTop: espacements.sm, marginBottom: espacements.sm, justifyContent: 'center' },

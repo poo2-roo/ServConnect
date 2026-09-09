@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import ConnexionScreen from './src/screens/ConnexionScreen';
 import InscriptionScreen from './src/screens/InscriptionScreen';
 import MainTabs from './src/navigation/MainTabs';
+import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 
 function Racine() {
   const { utilisateur, chargement } = useAuth();
@@ -24,6 +25,10 @@ function Racine() {
     ) : (
       <ConnexionScreen onAllerInscription={() => setAfficherInscription(true)} />
     );
+  }
+
+  if (utilisateur.role === 'administrateur') {
+    return <AdminDashboardScreen />;
   }
 
   return <MainTabs />;

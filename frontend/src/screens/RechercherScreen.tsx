@@ -8,26 +8,35 @@ import { couleurs } from '../theme/colors';
 import { rayons, espacements, stylesPartages } from '../theme/styles';
 import { creerConversation } from '../services/messagerie';
 
-export default function RechercherScreen({ navigation }: any) {
+export default function RechercherScreen({ navigation, route }: any) {
   const [recherche, setRecherche] = useState('');
   const [categories, setCategories] = useState<Categorie[]>([]);
   const [categorieActive, setCategorieActive] = useState<number | null>(null);
   const [prestataires, setPrestataires] = useState<Prestataire[]>([]);
   const [chargement, setChargement] = useState(true);
 
+  // Synchronize suggested category from route params
+  useEffect(() => {
+    const suggestion = route?.params?.categorieSuggeree;
+    if (suggestion) setCategorieActive(suggestion);
+  }, [route?.params?.categorieSuggeree]);
+
+  // Fetch initial data on mount
   useEffect(() => {
     (async () => {
       try {
         const [cat, prest] = await Promise.all([recupererCategories(), recupererPrestataires()]);
         setCategories(cat);
         setPrestataires(prest);
+      } catch (err) {
+        Alert.alert('Erreur', 'Impossible de charger les données.');
       } finally {
         setChargement(false);
       }
     })();
   }, []);
 
-   const prestatairesFiltres = prestataires.filter((p) => {
+  const prestatairesFiltres = prestataires.filter((p) => {
     const correspondRecherche = recherche === '' ||
       p.nom_entreprise.toLowerCase().includes(recherche.toLowerCase());
     const correspondCategorie = categorieActive === null ||
@@ -58,6 +67,23 @@ export default function RechercherScreen({ navigation }: any) {
           value={recherche}
           onChangeText={setRecherche}
         />
+      </View>
+
+      <View style={styles.rangeeActionsRecherche}>
+        <TouchableOpacity
+          style={styles.boutonActionRecherche}
+          onPress={() => navigation.navigate('CartePrestataires', { categorieId: categorieActive, recherche })}
+        >
+          <Ionicons name="map" size={16} color={couleurs.bleuBase} />
+          <Text style={styles.boutonActionRechercheTexte}>Voir sur la carte</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.boutonActionRecherche, { backgroundColor: couleurs.secondaire }]}
+          onPress={() => navigation.navigate('AssistantRecherche')}
+        >
+          <Ionicons name="sparkles" size={16} color={couleurs.blanc} />
+          <Text style={[styles.boutonActionRechercheTexte, { color: couleurs.blanc }]}>Assistant IA</Text>
+        </TouchableOpacity>
       </View>
 
       <Text style={styles.sousTitre}>Parcourir les catégories</Text>
@@ -107,6 +133,12 @@ const styles = StyleSheet.create({
     borderRadius: rayons.moyen, marginHorizontal: espacements.md, paddingHorizontal: espacements.sm,
     borderWidth: 1, borderColor: couleurs.bordure, marginBottom: espacements.md,
   },
+  rangeeActionsRecherche: { flexDirection: 'row', gap: espacements.sm, paddingHorizontal: espacements.md, marginBottom: espacements.md },
+  boutonActionRecherche: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1, borderColor: couleurs.bleuBase, borderRadius: rayons.moyen, paddingVertical: 10,
+  },
+  boutonActionRechercheTexte: { color: couleurs.bleuBase, fontWeight: '600', fontSize: 13 },
   champRecherche: { flex: 1, padding: 10, marginLeft: espacements.xs, fontSize: 14 },
   sousTitre: { fontWeight: '600', color: couleurs.tertiaire, marginHorizontal: espacements.md, marginBottom: espacements.sm },
   listeCategories: { paddingHorizontal: espacements.md, gap: espacements.xs, marginBottom: espacements.md },
