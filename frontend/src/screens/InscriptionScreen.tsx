@@ -64,7 +64,7 @@ export default function InscriptionScreen({ onRetourConnexion }: { onRetourConne
       });
       Alert.alert(
         'Compte créé !',
-        `Notez bien votre identifiant de connexion : ${username}\n\nVous en aurez besoin pour vous reconnecter.`
+        `Vous pourrez vous connecter avec votre email ou votre numéro de téléphone.`
       );
     } catch (erreur: any) {
       console.log('Erreur complete:', JSON.stringify(erreur, null, 2));

@@ -18,10 +18,15 @@ from .views import (
     PrestataireListView,
     ProfilView,
 )
+from .serializers import ConnexionSerializer
+
+
+class ConnexionView(TokenObtainPairView):
+    serializer_class = ConnexionSerializer
 
 urlpatterns = [
     path('inscription/', InscriptionView.as_view(), name='inscription'),
-    path('connexion/', TokenObtainPairView.as_view(), name='connexion'),
+    path('connexion/', ConnexionView.as_view(), name='connexion'),
     path('connexion/rafraichir/', TokenRefreshView.as_view(), name='connexion-rafraichir'),
 
     path('moi/', ProfilView.as_view(), name='profil'),

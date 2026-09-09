@@ -11,18 +11,18 @@ import { rayons, espacements } from '../theme/styles';
 
 export default function ConnexionScreen({ onAllerInscription }: { onAllerInscription: () => void }) {
   const { connexion } = useAuth();
-  const [username, setUsername] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [chargement, setChargement] = useState(false);
 
   async function handleConnexion() {
-    if (!username || !password) {
-      Alert.alert('Champs manquants', 'Merci de remplir votre identifiant et votre mot de passe.');
+    if (!identifier || !password) {
+      Alert.alert('Champs manquants', 'Merci de remplir votre email ou votre téléphone, ainsi que votre mot de passe.');
       return;
     }
     setChargement(true);
     try {
-      await connexion(username, password);
+      await connexion(identifier, password);
     } catch (erreur) {
       Alert.alert('Connexion impossible', 'Identifiant ou mot de passe incorrect.');
     } finally {
@@ -53,10 +53,10 @@ export default function ConnexionScreen({ onAllerInscription }: { onAllerInscrip
 
         <TextInput
           style={styles.champ}
-          placeholder="Nom d'utilisateur"
+          placeholder="Email ou numéro de téléphone"
           placeholderTextColor={couleurs.neutre}
-          value={username}
-          onChangeText={setUsername}
+          value={identifier}
+          onChangeText={setIdentifier}
           autoCapitalize="none"
         />
         <TextInput

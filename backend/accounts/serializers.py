@@ -1,8 +1,43 @@
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth import authenticate
 from services.models import Categorie
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import Administrateur, Client, Prestataire, Utilisateur
+
+
+class ConnexionSerializer(TokenObtainPairSerializer):
+    """Authentifie un utilisateur avec son email ou son numéro de téléphone."""
+
+    identifier = serializers.CharField(write_only=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop('username', None)
+
+    def validate(self, attrs):
+        identifier = attrs.pop('identifier')
+        password = attrs.get('password')
+        utilisateur = Utilisateur.objects.filter(email__iexact=identifier).first()
+        if utilisateur is None:
+            utilisateur = Utilisateur.objects.filter(telephone=identifier).first()
+
+        if utilisateur is None:
+            raise serializers.ValidationError('Email, téléphone ou mot de passe incorrect.')
+
+        utilisateur_authentifie = authenticate(
+            request=self.context.get('request'),
+            username=utilisateur.username,
+            password=password,
+        )
+        if utilisateur_authentifie is None:
+            raise serializers.ValidationError('Email, téléphone ou mot de passe incorrect.')
+
+        return super().validate({
+            'username': utilisateur.username,
+            'password': password,
+        })
 
 
 class UtilisateurSerializer(serializers.ModelSerializer):

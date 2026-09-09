@@ -6,7 +6,7 @@ import { Utilisateur, TokensAuth } from '../types';
 interface AuthContextType {
   utilisateur: Utilisateur | null;
   chargement: boolean;
-  connexion: (username: string, password: string) => Promise<void>;
+  connexion: (identifier: string, password: string) => Promise<void>;
   deconnexion: () => Promise<void>;
   inscription: (donnees: {
     username: string; password: string; telephone: string;
@@ -40,8 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     verifierSession();
   }, []);
 
-  async function connexion(username: string, password: string) {
-    const reponse = await api.post<TokensAuth>('/api/accounts/connexion/', { username, password });
+  async function connexion(identifier: string, password: string) {
+    const reponse = await api.post<TokensAuth>('/api/accounts/connexion/', { identifier, password });
     await SecureStore.setItemAsync('access_token', reponse.data.access);
     await SecureStore.setItemAsync('refresh_token', reponse.data.refresh);
 
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     latitude?: number; longitude?: number;
   }) {
     await api.post('/api/accounts/inscription/', { ...donnees, role: 'client' });
-    await connexion(donnees.username, donnees.password);
+    await connexion(donnees.email || donnees.telephone, donnees.password);
   }
 
   async function rafraichirUtilisateur() {
