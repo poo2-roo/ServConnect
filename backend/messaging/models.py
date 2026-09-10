@@ -71,3 +71,44 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message de {self.expediteur} — {self.date_envoi:%d/%m/%Y %H:%M}"
+
+
+
+class ConversationAdmin(models.Model):
+    """Conversation entre un administrateur et n'importe quel utilisateur (client ou prestataire)."""
+
+    administrateur = models.ForeignKey(
+        'accounts.Administrateur', on_delete=models.CASCADE, related_name='conversations_admin'
+    )
+    utilisateur = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='conversations_avec_admin'
+    )
+    date_creation = models.DateTimeField(auto_now_add=True)
+    derniere_activite = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Conversation avec administrateur"
+        verbose_name_plural = "Conversations avec administrateur"
+        ordering = ['-derniere_activite']
+
+    def __str__(self):
+        return f"Admin {self.administrateur} ↔ {self.utilisateur}"
+
+
+class MessageAdmin(models.Model):
+    conversation = models.ForeignKey(
+        ConversationAdmin, on_delete=models.CASCADE, related_name='messages'
+    )
+    expediteur = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='messages_admin_envoyes'
+    )
+    contenu = models.TextField()
+    date_envoi = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Message administrateur"
+        verbose_name_plural = "Messages administrateur"
+        ordering = ['date_envoi']
+
+    def __str__(self):
+        return f"Message admin de {self.expediteur} — {self.date_envoi:%d/%m/%Y %H:%M}"    

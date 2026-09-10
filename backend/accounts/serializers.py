@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate
 from services.models import Categorie
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import Administrateur, Client, Litige, Prestataire, Utilisateur
 
 from .models import Administrateur, Client, Prestataire, Utilisateur
 
@@ -157,3 +158,61 @@ class ClientLocalisationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = ['latitude', 'longitude', 'adresse_habituelle']
+
+
+class UtilisateurAdminSerializer(serializers.ModelSerializer):
+    profil_client = serializers.SerializerMethodField()
+    profil_prestataire = serializers.SerializerMethodField()
+    est_suspendu = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Utilisateur
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 'telephone',
+            'role', 'is_active', 'est_bloque', 'date_fin_suspension', 'motif_sanction',
+            'est_suspendu', 'date_creation', 'profil_client', 'profil_prestataire',
+        ]
+
+    def get_profil_client(self, obj):
+        if hasattr(obj, 'profil_client'):
+            return {
+                'id': obj.profil_client.id,
+                'adresse_habituelle': obj.profil_client.adresse_habituelle,
+            }
+        return None
+
+    def get_profil_prestataire(self, obj):
+        if hasattr(obj, 'profil_prestataire'):
+            p = obj.profil_prestataire
+            return {
+                'id': p.id,
+                'nom_entreprise': p.nom_entreprise,
+                'statut_kyc': p.statut_kyc,
+                'note_moyenne': str(p.note_moyenne),
+            }
+        return None
+
+    def get_est_suspendu(self, obj):
+        from django.utils import timezone
+        return bool(obj.date_fin_suspension and obj.date_fin_suspension > timezone.now())
+
+
+class LitigeSerializer(serializers.ModelSerializer):
+    utilisateur_nom = serializers.CharField(source='utilisateur.username', read_only=True)
+    utilisateur_role = serializers.CharField(source='utilisateur.role', read_only=True)
+    signale_par_nom = serializers.CharField(source='signale_par.username', read_only=True, default=None)
+
+    class Meta:
+        model = Litige
+        fields = [
+            'id', 'utilisateur', 'utilisateur_nom', 'utilisateur_role',
+            'signale_par', 'signale_par_nom', 'motif', 'statut', 'type_sanction',
+            'duree_jours', 'commentaire_resolution', 'date_creation', 'date_resolution',
+        ]
+        read_only_fields = ['statut', 'date_resolution']
+
+
+class ResoudreLitigeSerializer(serializers.Serializer):
+    type_sanction = serializers.ChoiceField(choices=Litige.TypeSanction.choices)
+    duree_jours = serializers.IntegerField(required=False, allow_null=True, min_value=1)
+    commentaire_resolution = serializers.CharField(required=False, allow_blank=True)

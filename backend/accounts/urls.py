@@ -1,16 +1,23 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .auth import ConnexionView
 
 from .views import (
     AdminBasculerActivationCompteView,
+    AdminLeverSanctionView,
+    AdminLitigeListCreateView,
+    AdminLitigeResoudreView,
     AdminPrestatairesEnAttenteView,
+    AdminUtilisateurDetailView,
+    AdminUtilisateursListView,
     AdminValiderKYCView,
     BasculerModeView,
     ClientDetailView,
+    ClientLocalisationUpdateView,
     DevenirPrestataireView,
     InscriptionView,
-    MonProfilPrestataireView,
     MonProfilPrestataireUpdateView,
+    MonProfilPrestataireView,
     PrestataireCategoriesUpdateView,
     PrestataireDetailView,
     PrestataireKYCUploadView,
@@ -43,4 +50,9 @@ urlpatterns = [
     path('moi/categories/', PrestataireCategoriesUpdateView.as_view(), name='prestataire-categories'),
     path('moi/prestataire/', MonProfilPrestataireView.as_view(), name='mon-profil-prestataire'),
     path('moi/prestataire/modifier/', MonProfilPrestataireUpdateView.as_view(), name='mon-profil-prestataire-modifier'),
+    path('admin/utilisateurs/', AdminUtilisateursListView.as_view(), name='admin-utilisateurs-list'),
+    path('admin/utilisateurs/<int:pk>/', AdminUtilisateurDetailView.as_view(), name='admin-utilisateur-detail'),
+    path('admin/utilisateurs/<int:pk>/lever-sanction/', AdminLeverSanctionView.as_view(), name='admin-lever-sanction'),
+    path('admin/litiges/', AdminLitigeListCreateView.as_view(), name='admin-litige-list-create'),
+    path('admin/litiges/<int:pk>/resoudre/', AdminLitigeResoudreView.as_view(), name='admin-litige-resoudre'),    
 ]

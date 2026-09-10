@@ -136,3 +136,59 @@ class ConversationSuggestionsView(APIView):
             return Response({"detail": str(exc)}, status=502)
 
         return Response({"suggestions": suggestions})
+
+
+from accounts.permissions import EstAdministrateur
+from .models import ConversationAdmin, MessageAdmin
+from .serializers import ConversationAdminSerializer, MessageAdminSerializer
+
+
+class EstParticipantConversationAdmin(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        administrateur = getattr(request.user, 'profil_administrateur', None)
+        return obj.administrateur == administrateur or obj.utilisateur == request.user
+
+
+class AdminConversationListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/messaging/admin-conversations/ — mes conversations (admin OU l'utilisateur ciblé)
+    POST /api/messaging/admin-conversations/ — un admin démarre (ou retrouve) une conversation avec un utilisateur
+    """
+
+    serializer_class = ConversationAdminSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        administrateur = getattr(user, 'profil_administrateur', None)
+        if administrateur:
+            return ConversationAdmin.objects.filter(administrateur=administrateur).select_related('utilisateur')
+        return ConversationAdmin.objects.filter(utilisateur=user).select_related('administrateur')
+
+    def create(self, request, *args, **kwargs):
+        administrateur = getattr(request.user, 'profil_administrateur', None)
+        if administrateur is None:
+            raise PermissionDenied("Seul un administrateur peut démarrer ce type de conversation.")
+
+        utilisateur_id = request.data.get('utilisateur')
+        conversation, _ = ConversationAdmin.objects.get_or_create(
+            administrateur=administrateur, utilisateur_id=utilisateur_id
+        )
+        return Response(self.get_serializer(conversation).data, status=201)
+
+
+class AdminMessageListCreateView(generics.ListCreateAPIView):
+    serializer_class = MessageAdminSerializer
+    permission_classes = [permissions.IsAuthenticated, EstParticipantConversationAdmin]
+
+    def get_conversation(self):
+        conversation = get_object_or_404(ConversationAdmin, pk=self.kwargs['conversation_id'])
+        self.check_object_permissions(self.request, conversation)
+        return conversation
+
+    def get_queryset(self):
+        return self.get_conversation().messages.select_related('expediteur')
+
+    def perform_create(self, serializer):
+        conversation = self.get_conversation()
+        serializer.save(conversation=conversation, expediteur=self.request.user)    

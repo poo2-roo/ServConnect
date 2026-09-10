@@ -259,3 +259,116 @@ class ClientLocalisationUpdateView(generics.UpdateAPIView):
         if client is None:
             raise PermissionDenied("Vous n'avez pas de profil client.")
         return client    
+
+from django.utils import timezone
+from .models import Litige
+from .serializers import LitigeSerializer, ResoudreLitigeSerializer, UtilisateurAdminSerializer
+
+
+class AdminUtilisateursListView(generics.ListAPIView):
+    """GET /api/accounts/admin/utilisateurs/?role=client|prestataire — tous les comptes."""
+
+    serializer_class = UtilisateurAdminSerializer
+    permission_classes = [EstAdministrateur]
+
+    def get_queryset(self):
+        queryset = Utilisateur.objects.all().order_by('-date_creation')
+        role = self.request.query_params.get('role')
+        if role:
+            queryset = queryset.filter(role=role)
+        recherche = self.request.query_params.get('search')
+        if recherche:
+            queryset = queryset.filter(username__icontains=recherche)
+        return queryset
+
+
+class AdminUtilisateurDetailView(generics.RetrieveAPIView):
+    """GET /api/accounts/admin/utilisateurs/<id>/ — détail complet d'un compte."""
+
+    queryset = Utilisateur.objects.all()
+    serializer_class = UtilisateurAdminSerializer
+    permission_classes = [EstAdministrateur]
+
+
+class AdminLitigeListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/accounts/admin/litiges/ — tous les litiges (filtrable par ?statut=ouvert)
+    POST /api/accounts/admin/litiges/ — ouvrir un litige contre un utilisateur
+    """
+
+    serializer_class = LitigeSerializer
+    permission_classes = [EstAdministrateur]
+
+    def get_queryset(self):
+        queryset = Litige.objects.select_related('utilisateur', 'signale_par')
+        statut = self.request.query_params.get('statut')
+        if statut:
+            queryset = queryset.filter(statut=statut)
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(signale_par=self.request.user)
+
+
+class AdminLitigeResoudreView(APIView):
+    """POST /api/accounts/admin/litiges/<id>/resoudre/ — applique une sanction et clôt le litige."""
+
+    permission_classes = [EstAdministrateur]
+
+    def post(self, request, pk):
+        try:
+            litige = Litige.objects.select_related('utilisateur').get(pk=pk)
+        except Litige.DoesNotExist:
+            return Response({"detail": "Litige introuvable."}, status=404)
+
+        serializer = ResoudreLitigeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        donnees = serializer.validated_data
+
+        utilisateur_cible = litige.utilisateur
+        if hasattr(utilisateur_cible, 'profil_administrateur'):
+            return Response({"detail": "Impossible de sanctionner un compte administrateur."}, status=400)
+
+        type_sanction = donnees['type_sanction']
+        if type_sanction == Litige.TypeSanction.SUSPENSION:
+            duree = donnees.get('duree_jours')
+            if not duree:
+                return Response({"detail": "duree_jours est obligatoire pour une suspension."}, status=400)
+            utilisateur_cible.date_fin_suspension = timezone.now() + timezone.timedelta(days=duree)
+            utilisateur_cible.est_bloque = False
+            utilisateur_cible.motif_sanction = litige.motif
+            utilisateur_cible.save(update_fields=['date_fin_suspension', 'est_bloque', 'motif_sanction'])
+        elif type_sanction == Litige.TypeSanction.BLOCAGE:
+            utilisateur_cible.est_bloque = True
+            utilisateur_cible.date_fin_suspension = None
+            utilisateur_cible.motif_sanction = litige.motif
+            utilisateur_cible.save(update_fields=['est_bloque', 'date_fin_suspension', 'motif_sanction'])
+        # AUCUNE : ne modifie rien sur l'utilisateur, juste clôture le litige
+
+        litige.statut = Litige.Statut.RESOLU
+        litige.type_sanction = type_sanction
+        litige.duree_jours = donnees.get('duree_jours')
+        litige.commentaire_resolution = donnees.get('commentaire_resolution', '')
+        litige.date_resolution = timezone.now()
+        litige.save()
+
+        return Response(LitigeSerializer(litige).data)
+
+
+class AdminLeverSanctionView(APIView):
+    """POST /api/accounts/admin/utilisateurs/<id>/lever-sanction/ — retire une suspension/blocage."""
+
+    permission_classes = [EstAdministrateur]
+
+    def post(self, request, pk):
+        try:
+            utilisateur = Utilisateur.objects.get(pk=pk)
+        except Utilisateur.DoesNotExist:
+            return Response({"detail": "Utilisateur introuvable."}, status=404)
+
+        utilisateur.est_bloque = False
+        utilisateur.date_fin_suspension = None
+        utilisateur.motif_sanction = ''
+        utilisateur.save(update_fields=['est_bloque', 'date_fin_suspension', 'motif_sanction'])
+
+        return Response(UtilisateurAdminSerializer(utilisateur).data)    

@@ -31,6 +31,9 @@ class Utilisateur(AbstractUser):
         max_length=2, choices=Langue.choices, default=Langue.FRANCAIS
     )
     telephone_verifie = models.BooleanField(default=False)
+    est_bloque = models.BooleanField(default=False)
+    date_fin_suspension = models.DateTimeField(blank=True, null=True)
+    motif_sanction = models.TextField(blank=True)   
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
@@ -138,3 +141,40 @@ class Administrateur(models.Model):
 
     def __str__(self):
         return f"Admin : {self.utilisateur.username} ({self.get_niveau_acces_display()})"
+
+class Litige(models.Model):
+    """Signalement d'un utilisateur, à traiter par un administrateur."""
+
+    class Statut(models.TextChoices):
+        OUVERT = 'ouvert', 'Ouvert'
+        RESOLU = 'resolu', 'Résolu'
+
+    class TypeSanction(models.TextChoices):
+        AUCUNE = 'aucune', 'Aucune sanction'
+        SUSPENSION = 'suspension', 'Suspension temporaire'
+        BLOCAGE = 'blocage', 'Blocage définitif'
+
+    utilisateur = models.ForeignKey(
+        Utilisateur, on_delete=models.CASCADE, related_name='litiges'
+    )
+    signale_par = models.ForeignKey(
+        Utilisateur, on_delete=models.SET_NULL, blank=True, null=True,
+        related_name='litiges_signales',
+    )
+    motif = models.TextField()
+    statut = models.CharField(max_length=20, choices=Statut.choices, default=Statut.OUVERT)
+    type_sanction = models.CharField(
+        max_length=20, choices=TypeSanction.choices, default=TypeSanction.AUCUNE
+    )
+    duree_jours = models.PositiveIntegerField(blank=True, null=True)
+    commentaire_resolution = models.TextField(blank=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_resolution = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Litige"
+        verbose_name_plural = "Litiges"
+        ordering = ['-date_creation']
+
+    def __str__(self):
+        return f"Litige #{self.id} — {self.utilisateur} ({self.get_statut_display()})"    
