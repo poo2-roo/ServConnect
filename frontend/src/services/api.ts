@@ -4,7 +4,6 @@ import * as SecureStore from 'expo-secure-store';
 const BASE_URL = 'https://servconnect-production.up.railway.app';
 const NOMBRE_TENTATIVES_MAX = 3;
 
-
 let cachedAccessToken: string | null = null;
 
 export const setApiAccessToken = (token: string | null) => {
@@ -13,12 +12,12 @@ export const setApiAccessToken = (token: string | null) => {
 
 export const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000, 
+  timeout: 10000,
+  headers: { // <-- Propriété rajoutée ici
     'Connection': 'close',
     'Accept': 'application/json',
   },
 });
-
 
 api.interceptors.request.use(async (config) => {
   if (!cachedAccessToken) {
@@ -45,7 +44,6 @@ api.interceptors.response.use(
 
     const config = erreur.config;
 
-
     if (!config || config._isRetry) {
       return Promise.reject(erreur);
     }
@@ -58,7 +56,6 @@ api.interceptors.response.use(
       if (config.__tentatives <= NOMBRE_TENTATIVES_MAX) {
         await attendre(1000 * config.__tentatives);
         
-       
         return api.request({ ...config, _isRetry: config.__tentatives >= NOMBRE_TENTATIVES_MAX });
       }
     }
