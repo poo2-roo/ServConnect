@@ -52,3 +52,7 @@ export async function modifierMonProfilPrestataire(donnees: {
   const reponse = await api.patch<Prestataire>('/api/accounts/moi/prestataire/modifier/', donnees);
   return reponse.data;
 }
+
+export async function mettreAJourLocalisationClient(latitude: number, longitude: number): Promise<void> {
+  await api.patch('/api/accounts/moi/localisation/', { latitude, longitude });
+}

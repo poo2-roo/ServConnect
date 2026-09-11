@@ -2,7 +2,7 @@ import api from './api';
 
 export interface FeatureLocalisation {
   type: string;
-  geometry: { type: string; coordinates: [number, number] }; // [lon, lat]
+  geometry: { type: string; coordinates: [number, number] }; 
   properties: {
     prestataire: number;
     nom_structure: string;

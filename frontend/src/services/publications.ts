@@ -3,7 +3,6 @@ import { Publication } from '../types';
 
 export async function recupererPublications(): Promise<Publication[]> {
   const reponse = await api.get<{ results?: Publication[] } | Publication[]>('/api/publications/');
-  // DRF peut paginer (objet avec "results") ou non (tableau direct) selon la config
   return Array.isArray(reponse.data) ? reponse.data : reponse.data.results || [];
 }
 

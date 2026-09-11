@@ -54,5 +54,6 @@ urlpatterns = [
     path('admin/utilisateurs/<int:pk>/', AdminUtilisateurDetailView.as_view(), name='admin-utilisateur-detail'),
     path('admin/utilisateurs/<int:pk>/lever-sanction/', AdminLeverSanctionView.as_view(), name='admin-lever-sanction'),
     path('admin/litiges/', AdminLitigeListCreateView.as_view(), name='admin-litige-list-create'),
-    path('admin/litiges/<int:pk>/resoudre/', AdminLitigeResoudreView.as_view(), name='admin-litige-resoudre'),    
+    path('admin/litiges/<int:pk>/resoudre/', AdminLitigeResoudreView.as_view(), name='admin-litige-resoudre'),
+    path('moi/localisation/', ClientLocalisationUpdateView.as_view(), name='client-localisation-update'),    
 ]

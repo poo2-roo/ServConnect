@@ -23,8 +23,41 @@ export default function ConnexionScreen({ onAllerInscription }: { onAllerInscrip
     setChargement(true);
     try {
       await connexion(identifier, password);
-    } catch (erreur) {
-      Alert.alert('Connexion impossible', 'Identifiant ou mot de passe incorrect.');
+    } catch (erreur: any) {
+      // 1. Détection des erreurs de réseau / mauvaise connexion
+      const estErreurReseau = 
+        !erreur?.response || 
+        erreur?.message?.toLowerCase().includes('network') || 
+        erreur?.message?.toLowerCase().includes('fetch');
+
+      if (estErreurReseau) {
+        Alert.alert(
+          'Connexion réseau instable',
+          'Impossible de joindre le serveur. Veuillez vérifier votre connexion internet et retransmettre votre demande.'
+        );
+      } 
+      // 2. Traitement des erreurs de sanction (compte bloqué ou suspendu)
+      else if (erreur?.sanction) {
+        const s = erreur.sanction;
+        if (s.code === 'bloque') {
+          Alert.alert(
+            'Compte bloqué',
+            `Votre compte a été bloqué définitivement.\n\nMotif : ${s.motif}`
+          );
+        } else {
+          const dateFin = new Date(s.date_fin_suspension).toLocaleDateString('fr-FR', {
+            day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+          });
+          Alert.alert(
+            'Compte suspendu',
+            `Votre compte est suspendu jusqu'au ${dateFin}.\n\nMotif : ${s.motif}`
+          );
+        }
+      } 
+      // 3. Autre erreur (ex: mauvais identifiants)
+      else {
+        Alert.alert('Connexion impossible', 'Identifiant ou mot de passe incorrect.');
+      }
     } finally {
       setChargement(false);
     }
@@ -37,7 +70,7 @@ export default function ConnexionScreen({ onAllerInscription }: { onAllerInscrip
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
 
-        {/* Photo héro (à remplacer plus tard par une vraie image de prestataire) */}
+        {/* Photo héro */}
         <View style={styles.heroConteneur}>
           <Image
             source={{ uri: 'https://images.unsplash.com/photo-1622396636133-ba608305f3ce?w=300&q=80' }}

@@ -10,8 +10,12 @@
       "supportsTablet": true
     },
     "android": {
+      "usesCleartextTraffic": true,
       "permissions": [
-        "INTERNET"
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
       ],
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -28,6 +32,11 @@
     },
     "plugins": [
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8aa39808-9c2a-4ac5-9d9f-4b08b4c4975e"
+      }
+    }
   }
 }

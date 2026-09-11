@@ -21,7 +21,6 @@ export default function CartePublication({ publication, onPress }: { publication
       setAime(resultat.aime);
       setNombreLikes(resultat.nombre_likes);
     } catch {
-      // en cas d'echec, on annule le changement optimiste
       setAime(aime);
       setNombreLikes(nombreLikes);
     }

@@ -206,6 +206,12 @@ export default function ProfilScreen({ navigation }: any) {
           <Text style={stylesPartages.boutonPrincipalTexte}>Devenir prestataire</Text>
         </TouchableOpacity>
       )}
+      <TouchableOpacity
+        style={[stylesPartages.boutonContour, { width: '100%', marginBottom: espacements.md }]}
+        onPress={() => navigation.navigate('MesMessagesAdmin')}
+      >
+        <Text style={stylesPartages.boutonContourTexte}>Support / Messages administrateur</Text>
+      </TouchableOpacity>      
 
       {afficherFormPrestataire && (
         <View style={styles.formEdition}>

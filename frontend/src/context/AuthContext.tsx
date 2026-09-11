@@ -40,15 +40,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     verifierSession();
   }, []);
 
-  async function connexion(identifier: string, password: string) {
-    const reponse = await api.post<TokensAuth>('/api/accounts/connexion/', { identifier, password });
-    await SecureStore.setItemAsync('access_token', reponse.data.access);
-    await SecureStore.setItemAsync('refresh_token', reponse.data.refresh);
+  async function connexion(username: string, password: string) {
+    try {
+      const reponse = await api.post<TokensAuth>('/api/accounts/connexion/', { username, password });
+      await SecureStore.setItemAsync('access_token', reponse.data.access);
+      await SecureStore.setItemAsync('refresh_token', reponse.data.refresh);
 
-    const profil = await api.get<Utilisateur>('/api/accounts/moi/');
-    setUtilisateur(profil.data);
+      const profil = await api.get<Utilisateur>('/api/accounts/moi/');
+      setUtilisateur(profil.data);
+    } catch (erreur: any) {
+      const donnees = erreur?.response?.data;
+      if (donnees?.code === 'bloque' || donnees?.code === 'suspendu') {
+        const err: any = new Error(donnees.detail);
+        err.sanction = donnees;
+        throw err;
+      }
+      throw erreur;
+    }
   }
-
   async function deconnexion() {
     await SecureStore.deleteItemAsync('access_token');
     await SecureStore.deleteItemAsync('refresh_token');

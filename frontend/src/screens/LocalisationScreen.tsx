@@ -13,7 +13,7 @@ interface Props {
   onRetour: () => void;
 }
 
-// Page HTML autonome : carte Leaflet + tuiles OpenStreetMap (gratuites, sans cle API)
+//  carte Leaflet + tuiles OpenStreetMap (gratuites, sans cle API)
 function genererHtmlCarte(lat: number, lon: number): string {
   return `
 <!DOCTYPE html>

@@ -11,7 +11,7 @@ import { Prestataire, Categorie } from '../types';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements, stylesPartages } from '../theme/styles';
 
-export default function AdminDashboardScreen() {
+export default function AdminDashboardScreen({ navigation }: any) {
   const { deconnexion } = useAuth();
   const [enAttente, setEnAttente] = useState<Prestataire[]>([]);
   const [categories, setCategories] = useState<Categorie[]>([]);
@@ -71,7 +71,15 @@ export default function AdminDashboardScreen() {
           <Ionicons name="log-out-outline" size={24} color="#DA1E28" />
         </TouchableOpacity>
       </View>
-
+      <View style={{ flexDirection: 'row', gap: espacements.sm, marginBottom: espacements.md }}>
+        <TouchableOpacity style={[stylesPartages.boutonContour, { flex: 1 }]} onPress={() => navigation.navigate('AdminUtilisateurs')}>
+          <Text style={stylesPartages.boutonContourTexte}>Utilisateurs</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[stylesPartages.boutonContour, { flex: 1 }]} onPress={() => navigation.navigate('AdminLitiges')}>
+          <Text style={stylesPartages.boutonContourTexte}>Litiges</Text>
+        </TouchableOpacity>
+      </View>
+      
       <Text style={styles.titreSection}>KYC en attente ({enAttente.length})</Text>
       {enAttente.length === 0 ? (
         <Text style={styles.vide}>Aucun dossier en attente.</Text>

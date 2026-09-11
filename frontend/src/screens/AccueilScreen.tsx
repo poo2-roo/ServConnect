@@ -19,7 +19,7 @@ export default function AccueilScreen({ navigation }: any) {
       const donnees = await recupererPublications();
       setPublications(donnees);
     } catch {
-      // On pourrait afficher un message d'erreur ici plus tard
+      // afficher un message d'erreur ici plus tard
     } finally {
       setChargement(false);
       setRafraichissement(false);
