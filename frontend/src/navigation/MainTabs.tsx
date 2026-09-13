@@ -5,8 +5,9 @@ import api from '../services/api';
 import AccueilStack from './AccueilStack';
 import RechercherStack from './RechercherStack';
 import MessagesStack from './MessagesStack';
-import ProfilScreen from '../screens/ProfilScreen';
+
 import { couleurs } from '../theme/colors';
+import ProfilStack from './ProfilStack';
 
 const Tab = createBottomTabNavigator();
 
@@ -57,7 +58,7 @@ export default function MainTabs() {
       <Tab.Screen name="Accueil" component={AccueilStack} />
       <Tab.Screen name="Rechercher" component={RechercherStack} />
       <Tab.Screen name="Messages" component={MessagesStack} />
-      <Tab.Screen name="Profil" component={ProfilScreen} />
+      <Tab.Screen name="Profil" component={ProfilStack} />
     </Tab.Navigator>
   );
 }
