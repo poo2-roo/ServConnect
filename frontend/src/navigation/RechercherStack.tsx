@@ -5,6 +5,10 @@ import PrestataireDetailScreen from '../screens/PrestataireDetailScreen';
 import ConversationScreen from '../screens/ConversationScreen';
 import CartePrestatairesScreen from '../screens/CartePrestatairesScreen';
 import AssistantRechercheScreen from '../screens/AssistantRechercheScreen';
+import PublicationDetailScreen from '../screens/PublicationDetailScreen';
+
+
+
 
 const Stack = createNativeStackNavigator();
 
@@ -16,6 +20,8 @@ export default function RechercherStack() {
       <Stack.Screen name="Conversation" component={ConversationScreen} />
       <Stack.Screen name="CartePrestataires" component={CartePrestatairesScreen} />
       <Stack.Screen name="AssistantRecherche" component={AssistantRechercheScreen} />
+      <Stack.Screen name="PublicationDetail" component={PublicationDetailScreen} />
+      
     </Stack.Navigator>
   );
 }

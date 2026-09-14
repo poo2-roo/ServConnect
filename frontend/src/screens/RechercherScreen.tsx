@@ -77,6 +77,9 @@ export default function RechercherScreen({ navigation, route }: any) {
           <Ionicons name="map" size={16} color={couleurs.bleuBase} />
           <Text style={styles.boutonActionRechercheTexte}>Voir sur la carte</Text>
         </TouchableOpacity>
+
+
+
         <TouchableOpacity
           style={[styles.boutonActionRecherche, { backgroundColor: couleurs.secondaire }]}
           onPress={() => navigation.navigate('AssistantRecherche')}

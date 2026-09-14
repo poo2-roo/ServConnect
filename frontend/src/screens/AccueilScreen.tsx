@@ -7,6 +7,7 @@ import { Publication } from '../types';
 import { couleurs } from '../theme/colors';
 import { espacements } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
+import SectionRecommandations from '../components/SectionRecommandations';
 
 export default function AccueilScreen({ navigation }: any) {
   const [publications, setPublications] = useState<Publication[]>([]);
@@ -48,7 +49,7 @@ export default function AccueilScreen({ navigation }: any) {
         <Text style={styles.titre}>ServConnect</Text>
         <View style={{ width: 4 }} />
       </View>
-
+ <SectionRecommandations />
       {chargement ? (
         <ActivityIndicator style={{ marginTop: espacements.xl }} size="large" color={couleurs.bleuBase} />
       ) : (

@@ -1,28 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { recupererPrestataire, recupererAvisPrestataire, recupererServicesPrestataire } from '../services/prestataireDetail';
+import { WebView } from 'react-native-webview';
+import * as Location from 'expo-location';
+import { Linking } from 'react-native';
+import { recupererPublicationsPrestataire } from '../services/publications';
+import { Publication } from '../types';
+import CartePublication from '../components/CartePublication';
+
+import { 
+  recupererPrestataire, 
+  recupererAvisPrestataire, 
+  recupererServicesPrestataire, 
+  laisserAvis, 
+  recupererLocalisationPrestataire, 
+  recupererETA 
+} from '../services/prestataireDetail';
+import { creerConversation } from '../services/messagerie';
 import { Prestataire, Avis, Service } from '../types';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements, stylesPartages } from '../theme/styles';
-import { creerConversation } from '../services/messagerie';
-import { laisserAvis } from '../services/prestataireDetail';
 import SelecteurEtoiles from '../components/SelecteurEtoiles';
-import { useAuth } from '../context/AuthContext';
-import { useNavigation } from '@react-navigation/native';
-import { WebView } from 'react-native-webview';
-import * as Location from 'expo-location';
-import { recupererLocalisationPrestataire, recupererETA } from '../services/prestataireDetail';
 
 const AVATAR_PLACEHOLDER = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&q=80';
 
 export default function PrestataireDetailScreen({ route, navigation }: any) {
   const { prestataireId } = route.params;
+
+  // Ref déclarée correctement au niveau supérieur du composant
+  const localisationCoords = useRef<{ lat: number; lon: number } | null>(null);
+  const [publications, setPublications] = useState<Publication[]>([]);
   const [prestataire, setPrestataire] = useState<Prestataire | null>(null);
   const [avis, setAvis] = useState<Avis[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [chargement, setChargement] = useState(true);
-    const [creationConversation, setCreationConversation] = useState(false);
+  const [creationConversation, setCreationConversation] = useState(false);
   const [afficherFormAvis, setAfficherFormAvis] = useState(false);
   const [noteChoisie, setNoteChoisie] = useState(0);
   const [commentaireAvis, setCommentaireAvis] = useState('');
@@ -30,22 +42,29 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
   const [eta, setEta] = useState<any>(null);
   const [htmlCarteTrajet, setHtmlCarteTrajet] = useState<string | null>(null);
   const [chargementEta, setChargementEta] = useState(true);
+
+  // Charger les détails du prestataire, avis et services
   useEffect(() => {
     (async () => {
       try {
-        const [p, a, s] = await Promise.all([
+        const [p, a, s, pubs] = await Promise.all([
+          
           recupererPrestataire(prestataireId),
           recupererAvisPrestataire(prestataireId),
           recupererServicesPrestataire(prestataireId),
+          recupererPublicationsPrestataire(prestataireId),
         ]);
         setPrestataire(p);
         setAvis(a);
         setServices(s);
+        setPublications(pubs);
       } finally {
         setChargement(false);
       }
     })();
   }, [prestataireId]);
+
+  // Charger l'itinéraire et l'ETA
   useEffect(() => {
     (async () => {
       try {
@@ -58,6 +77,9 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
         const position = await Location.getCurrentPositionAsync({});
         const { latitude, longitude } = position.coords;
         const [lonP, latP] = localisation.geometry.coordinates;
+        
+        // Attribution de la valeur à la ref
+        localisationCoords.current = { lat: latP, lon: lonP };
 
         const resultatEta = await recupererETA(localisation.id, latitude, longitude);
         setEta(resultatEta);
@@ -78,27 +100,12 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
   map.fitBounds(pts, {padding:[30,30]});
 </script></body></html>`);
       } catch {
-        // silencieux : l'itineraire est une info secondaire, pas bloquante
+        // silencieux : l'itinéraire est une info secondaire, pas bloquante
       } finally {
         setChargementEta(false);
       }
     })();
   }, [prestataireId]);
-  if (chargement) {
-    return (
-      <View style={styles.centre}>
-        <ActivityIndicator size="large" color={couleurs.bleuBase} />
-      </View>
-    );
-  }
-
-  if (!prestataire) {
-    return (
-      <View style={styles.centre}>
-        <Text style={{ color: couleurs.neutre }}>Prestataire introuvable.</Text>
-      </View>
-    );
-  }
 
   async function handleEnvoyerAvis() {
     if (noteChoisie === 0) {
@@ -136,6 +143,32 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
     } finally {
       setCreationConversation(false);
     }
+  }
+
+  function ouvrirItineraire(latDest: number, lonDest: number) {
+    const url = Platform.select({
+      ios: `maps://app?daddr=${latDest},${lonDest}`,
+      android: `google.navigation:q=${latDest},${lonDest}`,
+    });
+    Linking.openURL(url!).catch(() => {
+      Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${latDest},${lonDest}`);
+    });
+  }
+
+  if (chargement) {
+    return (
+      <View style={styles.centre}>
+        <ActivityIndicator size="large" color={couleurs.bleuBase} />
+      </View>
+    );
+  }
+
+  if (!prestataire) {
+    return (
+      <View style={styles.centre}>
+        <Text style={{ color: couleurs.neutre }}>Prestataire introuvable.</Text>
+      </View>
+    );
   }
 
   const note = parseFloat(prestataire.note_moyenne || '0');
@@ -220,6 +253,19 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
         </View>
       )}
 
+      <Text style={styles.titreSection}>Publications</Text>
+      {publications.length === 0 ? (
+        <Text style={styles.videTexte}>Aucune publication pour le moment.</Text>
+      ) : (
+        publications.map((pub) => (
+          <CartePublication
+            key={pub.id}
+            publication={pub}
+            onPress={() => navigation.navigate('PublicationDetail', { publication: pub })}
+          />
+        ))
+      )}
+
       <Text style={styles.titreSection}>Avis clients</Text>
       {avis.length === 0 ? (
         <Text style={styles.videTexte}>Aucun avis pour le moment.</Text>
@@ -242,6 +288,7 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
           </View>
         ))
       )}
+
       {!chargementEta && eta && (
         <View style={styles.blocEta}>
           <Text style={styles.titreSection}>Itinéraire estimé</Text>
@@ -249,6 +296,17 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
             {eta.distance_km} km · environ {eta.eta_minutes_min}-{eta.eta_minutes_max} min
           </Text>
           <Text style={styles.etaAvertissement}>{eta.avertissement}</Text>
+
+          {localisationCoords.current && (
+            <TouchableOpacity
+              style={[stylesPartages.boutonPrincipal, { marginTop: espacements.sm }]}
+              onPress={() => ouvrirItineraire(localisationCoords.current!.lat, localisationCoords.current!.lon)}
+            >
+              <Ionicons name="navigate" size={16} color={couleurs.blanc} />
+              <Text style={stylesPartages.boutonPrincipalTexte}> Ouvrir l'itinéraire</Text>
+            </TouchableOpacity>
+          )}
+
           {htmlCarteTrajet && (
             <View style={styles.carteTrajetConteneur}>
               <WebView source={{ html: htmlCarteTrajet }} />
@@ -273,7 +331,6 @@ const styles = StyleSheet.create({
   rangeeBoutonsAvis: { flexDirection: 'row', gap: espacements.sm },
   avatar: { width: 90, height: 90, borderRadius: rayons.rond, backgroundColor: couleurs.bordure, marginBottom: espacements.sm },
   nom: { fontSize: 20, fontWeight: 'bold', color: couleurs.tertiaire, textAlign: 'center' },
-
   ligneNote: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: espacements.xs },
   noteTexte: { fontWeight: '600', color: couleurs.tertiaire },
   nombreAvis: { fontSize: 12, color: couleurs.neutre },
@@ -281,18 +338,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', backgroundColor: couleurs.secondaire,
     borderRadius: rayons.rond, paddingVertical: 2, paddingHorizontal: 8, marginLeft: espacements.xs, gap: 3,
   },
+  cartePublicationMini: { width: '100%', backgroundColor: couleurs.blanc, borderRadius: rayons.moyen, padding: espacements.sm, marginBottom: espacements.sm },
+  textePublicationMini: { fontSize: 13, color: couleurs.tertiaire, marginBottom: espacements.xs },
+  rangeeIconesPublication: { flexDirection: 'row', alignItems: 'center' },
+  compteurMini: { fontSize: 11, color: couleurs.neutre, marginLeft: 4 },
+
+  badgeVerifieTexte: { color: couleurs.blanc, fontSize: 10, fontWeight: '600' },
   blocEta: { width: '100%', marginTop: espacements.lg },
   etaTexte: { fontSize: 15, fontWeight: '600', color: couleurs.tertiaire },
   etaAvertissement: { fontSize: 11, color: couleurs.neutre, marginBottom: espacements.sm, fontStyle: 'italic' },
   carteTrajetConteneur: { width: '100%', height: 180, borderRadius: rayons.moyen, overflow: 'hidden' },  
-  badgeVerifieTexte: { color: couleurs.blanc, fontSize: 10, fontWeight: '600' },
-
   rangeeCategories: { flexDirection: 'row', flexWrap: 'wrap', gap: espacements.xs, marginTop: espacements.sm, marginBottom: espacements.sm, justifyContent: 'center' },
   description: { fontSize: 13, color: couleurs.neutre, textAlign: 'center', marginBottom: espacements.md, lineHeight: 18 },
-
   titreSection: { alignSelf: 'flex-start', fontWeight: '600', color: couleurs.tertiaire, marginTop: espacements.lg, marginBottom: espacements.sm },
   videTexte: { alignSelf: 'flex-start', color: couleurs.neutre, fontSize: 13 },
-
   carteService: {
     width: '100%', backgroundColor: couleurs.blanc, borderRadius: rayons.moyen,
     padding: espacements.sm, marginBottom: espacements.sm, borderWidth: 1, borderColor: couleurs.bordure,
@@ -300,7 +359,6 @@ const styles = StyleSheet.create({
   serviceTitre: { fontWeight: '600', color: couleurs.tertiaire, fontSize: 14 },
   serviceDescription: { fontSize: 12, color: couleurs.neutre, marginTop: 2, marginBottom: 4 },
   servicePrix: { fontSize: 13, color: couleurs.bleuBase, fontWeight: '600' },
-
   carteAvis: {
     width: '100%', backgroundColor: couleurs.blanc, borderRadius: rayons.moyen,
     padding: espacements.sm, marginBottom: espacements.sm,

@@ -32,3 +32,11 @@ export async function ajouterCommentaire(publicationId: number, contenu: string)
   const reponse = await api.post<Commentaire>(`/api/publications/${publicationId}/commentaires/`, { contenu });
   return reponse.data;
 }
+
+export async function recupererPublicationsPrestataire(prestataireId: number): Promise<Publication[]> {
+  const r = await api.get<{ results?: Publication[] } | Publication[]>('/api/publications/', {
+    params: { prestataire: prestataireId },
+  });
+  return Array.isArray(r.data) ? r.data : r.data.results || [];
+}
+

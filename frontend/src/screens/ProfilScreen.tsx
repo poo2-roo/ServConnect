@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import CartePublication from '../components/CartePublication';
 import { useAuth } from '../context/AuthContext';
 import {
   mettreAJourPhoto, mettreAJourProfil, devenirPrestataireAvecCategories,
@@ -15,6 +16,8 @@ import { rayons, espacements, stylesPartages } from '../theme/styles';
 import { Prestataire } from '../types';
 import KYCSection from '../components/KYCSection';
 import SelecteurCategories from '../components/SelecteurCategories';
+import { recupererPublicationsPrestataire } from '../services/publications';
+import { Publication } from '../types'
 
 export default function ProfilScreen({ navigation }: any) {
   const { utilisateur, deconnexion, rafraichirUtilisateur } = useAuth();
@@ -24,6 +27,7 @@ export default function ProfilScreen({ navigation }: any) {
   const [email, setEmail] = useState(utilisateur?.email || '');
   const [chargementPhoto, setChargementPhoto] = useState(false);
   const [chargementSauvegarde, setChargementSauvegarde] = useState(false);
+  const [mesPublications, setMesPublications] = useState<Publication[]>([]);
 
   const [monPrestataire, setMonPrestataire] = useState<Prestataire | null>(null);
   const [modificationCategories, setModificationCategories] = useState(false);
@@ -47,6 +51,7 @@ export default function ProfilScreen({ navigation }: any) {
       recupererMonProfilPrestataire()
         .then((p) => {
           setMonPrestataire(p);
+          recupererPublicationsPrestataire(p.id).then(setMesPublications).catch(() => {});
           setCategoriesEnEdition(p.categories.map((c) => c.id));
         })
         .catch(() => {});
@@ -236,6 +241,21 @@ export default function ProfilScreen({ navigation }: any) {
           >
             <Text style={stylesPartages.boutonContourTexte}>Créer une publication</Text>
           </TouchableOpacity>
+                <TouchableOpacity
+        style={[stylesPartages.boutonContour, { width: '100%', marginBottom: espacements.md }]}
+        onPress={() => navigation.navigate('Accueil', { screen: 'CreerService' })}
+      >
+        <Text style={stylesPartages.boutonContourTexte}>Publier un nouveau service</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[stylesPartages.boutonContour, { width: '100%', marginBottom: espacements.md }]}
+        onPress={() => navigation.navigate('DeclarerStructure')}
+      >
+        <Text style={stylesPartages.boutonContourTexte}>Déclarer ma structure (position)</Text>
+      </TouchableOpacity>
+
+
             <Text style={styles.titreSection}>Mon activité</Text>
             {enEditionPrestataire ? (
               <View key="edition-activite">
@@ -295,6 +315,21 @@ export default function ProfilScreen({ navigation }: any) {
             )}
           </View>
 
+          <View style={styles.sectionCategories}>
+            <Text style={styles.titreSection}>Mes publications ({mesPublications.length})</Text>
+            {mesPublications.length === 0 ? (
+              <Text style={{ color: couleurs.neutre, fontSize: 13 }}>Aucune publication.</Text>
+            ) : (
+              mesPublications.map((pub) => (
+                <CartePublication
+                  key={pub.id}
+                  publication={pub}
+                  onPress={() => navigation.navigate('PublicationDetail', { publication: pub })}
+                />
+              ))
+            )}
+          </View>
+
           <KYCSection />
         </View>
       )}
@@ -345,5 +380,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#DA1E28', borderRadius: rayons.moyen,
     paddingVertical: 12, paddingHorizontal: 24, width: '100%', alignItems: 'center',
   },
+
+  cartePublicationMini: { width: '100%', backgroundColor: couleurs.blanc, borderRadius: rayons.moyen, padding: espacements.sm, marginBottom: espacements.sm },
+  textePublicationMini: { fontSize: 13, color: couleurs.tertiaire, marginBottom: 4 },
+  compteurMini: { fontSize: 11, color: couleurs.neutre },  
   boutonDeconnexionTexte: { color: '#DA1E28', fontWeight: '600' },
 });
