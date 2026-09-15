@@ -25,15 +25,41 @@ export async function laisserAvis(prestataireId: number, note: number, commentai
   return reponse.data;
 }
 
-export async function recupererLocalisationPrestataire(prestataireId: number) {
-  const r = await api.get<{ results?: any[] } | any[]>('/api/geolocation/localisations/', {
+export async function recupererLocalisationPrestataire(prestataireId: string) {
+  const r = await api.get('/api/geolocation/localisations/', {
     params: { prestataire: prestataireId },
   });
-  const donnees = Array.isArray(r.data) ? r.data : r.data.results || [];
-  return donnees[0] || null;
+
+  const data: any = r.data;
+
+  // Gère les différentes formes possibles renvoyées par l'API :
+  // 1. Un tableau direct de Features
+  // 2. { results: [...features] } (pagination classique)
+  // 3. { results: { type: 'FeatureCollection', features: [...] } } (pagination + GeoJSON imbriqué)
+  // 4. { type: 'FeatureCollection', features: [...] } (sans pagination)
+  let features: any[] = [];
+
+  if (Array.isArray(data)) {
+    features = data;
+  } else if (Array.isArray(data?.results)) {
+    features = data.results;
+  } else if (Array.isArray(data?.results?.features)) {
+    features = data.results.features;
+  } else if (Array.isArray(data?.features)) {
+    features = data.features;
+  }
+
+  return features[0] || null;
 }
 
 export async function recupererETA(localisationId: number, lat: number, lon: number) {
-  const r = await api.get(`/api/geolocation/localisations/${localisationId}/eta/`, { params: { lat, lon } });
-  return r.data;
+  try {
+    const response = await api.get(`/api/geolocation/localisations/${localisationId}/eta/`, {
+      params: { lat, lon },
+    });
+    return response.data;
+  } catch (erreur) {
+    console.log('Erreur API recupererETA:', erreur);
+    throw erreur;
+  }
 }

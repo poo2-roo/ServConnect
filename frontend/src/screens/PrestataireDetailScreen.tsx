@@ -14,7 +14,7 @@ import {
   recupererServicesPrestataire, 
   laisserAvis, 
   recupererLocalisationPrestataire, 
-  recupererETA 
+  recupererETA
 } from '../services/prestataireDetail';
 import { creerConversation } from '../services/messagerie';
 import { Prestataire, Avis, Service } from '../types';
@@ -65,26 +65,46 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
   }, [prestataireId]);
 
   // Charger l'itinéraire et l'ETA
-  useEffect(() => {
-    (async () => {
-      try {
-        const localisation = await recupererLocalisationPrestataire(prestataireId);
-        if (!localisation) { setChargementEta(false); return; }
 
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') { setChargementEta(false); return; }
+useEffect(() => {
+  (async () => {
+    try {
+      const donnes = await recupererLocalisationPrestataire(prestataireId);
+      if (!donnes) { setChargementEta(false); return; }
 
-        const position = await Location.getCurrentPositionAsync({});
-        const { latitude, longitude } = position.coords;
-        const [lonP, latP] = localisation.geometry.coordinates;
-        
-        // Attribution de la valeur à la ref
-        localisationCoords.current = { lat: latP, lon: lonP };
+      // 1. Extraire la première structure si le serveur renvoie un tableau ou une FeatureCollection
+      let localisation = null;
+      if (Array.isArray(donnes) && donnes.length > 0) {
+        localisation = donnes[0];
+      } else if (donnes.features && donnes.features.length > 0) {
+        localisation = donnes.features[0];
+      } else if (donnes.id) {
+        localisation = donnes;
+      }
 
-        const resultatEta = await recupererETA(localisation.id, latitude, longitude);
-        setEta(resultatEta);
+      if (!localisation) { setChargementEta(false); return; }
 
-        setHtmlCarteTrajet(`
+      // 2. Vérifier les permissions GPS
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') { setChargementEta(false); return; }
+
+      const position = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = position.coords;
+
+      // 3. Récupérer les coordonnées GeoJSON [longitude, latitude]
+      const coords = localisation.geometry?.coordinates;
+      if (!coords) { setChargementEta(false); return; }
+      
+      const lonP = coords[0];
+      const latP = coords[1];
+
+      localisationCoords.current = { lat: latP, lon: lonP };
+
+      // 4. Récupérer l'ETA via l'ID de la localisation
+      const resultatEta = await recupererETA(localisation.id, latitude, longitude);
+      setEta(resultatEta);
+
+      setHtmlCarteTrajet(`
 <!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>html,body,#c{height:100%;margin:0;padding:0;}</style></head>
@@ -99,13 +119,13 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
   L.polyline(pts, {color:'#0F62FE'}).addTo(map);
   map.fitBounds(pts, {padding:[30,30]});
 </script></body></html>`);
-      } catch {
-        // silencieux : l'itinéraire est une info secondaire, pas bloquante
-      } finally {
-        setChargementEta(false);
-      }
-    })();
-  }, [prestataireId]);
+    } catch (erreur) {
+      console.log('Erreur chargement itinéraire/ETA:', erreur);
+    } finally {
+      setChargementEta(false);
+    }
+  })();
+}, [prestataireId]);
 
   async function handleEnvoyerAvis() {
     if (noteChoisie === 0) {
