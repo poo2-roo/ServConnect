@@ -48,7 +48,6 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
     (async () => {
       try {
         const [p, a, s, pubs] = await Promise.all([
-          
           recupererPrestataire(prestataireId),
           recupererAvisPrestataire(prestataireId),
           recupererServicesPrestataire(prestataireId),
@@ -65,67 +64,108 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
   }, [prestataireId]);
 
   // Charger l'itinéraire et l'ETA
+  useEffect(() => {
+    (async () => {
+      try {
+        const donnes = await recupererLocalisationPrestataire(prestataireId);
+        if (!donnes) { setChargementEta(false); return; }
 
-useEffect(() => {
-  (async () => {
-    try {
-      const donnes = await recupererLocalisationPrestataire(prestataireId);
-      if (!donnes) { setChargementEta(false); return; }
+        // 1. Extraire la première structure si le serveur renvoie un tableau ou une FeatureCollection
+        let localisation = null;
+        if (Array.isArray(donnes) && donnes.length > 0) {
+          localisation = donnes[0];
+        } else if (donnes.features && donnes.features.length > 0) {
+          localisation = donnes.features[0];
+        } else if (donnes.id) {
+          localisation = donnes;
+        }
 
-      // 1. Extraire la première structure si le serveur renvoie un tableau ou une FeatureCollection
-      let localisation = null;
-      if (Array.isArray(donnes) && donnes.length > 0) {
-        localisation = donnes[0];
-      } else if (donnes.features && donnes.features.length > 0) {
-        localisation = donnes.features[0];
-      } else if (donnes.id) {
-        localisation = donnes;
-      }
+        if (!localisation) { setChargementEta(false); return; }
 
-      if (!localisation) { setChargementEta(false); return; }
+        // 2. Vérifier les permissions GPS
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') { setChargementEta(false); return; }
 
-      // 2. Vérifier les permissions GPS
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { setChargementEta(false); return; }
+        const position = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = position.coords;
 
-      const position = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = position.coords;
+        // 3. Récupérer les coordonnées GeoJSON [longitude, latitude]
+        const coords = localisation.geometry?.coordinates;
+        if (!coords) { setChargementEta(false); return; }
+        
+        const lonP = coords[0];
+        const latP = coords[1];
 
-      // 3. Récupérer les coordonnées GeoJSON [longitude, latitude]
-      const coords = localisation.geometry?.coordinates;
-      if (!coords) { setChargementEta(false); return; }
-      
-      const lonP = coords[0];
-      const latP = coords[1];
+        localisationCoords.current = { lat: latP, lon: lonP };
 
-      localisationCoords.current = { lat: latP, lon: lonP };
+        // 4. Récupérer l'ETA via l'ID de la localisation
+        const resultatEta = await recupererETA(localisation.id, latitude, longitude);
+        setEta(resultatEta);
 
-      // 4. Récupérer l'ETA via l'ID de la localisation
-      const resultatEta = await recupererETA(localisation.id, latitude, longitude);
-      setEta(resultatEta);
-
-      setHtmlCarteTrajet(`
+        // Mise à jour uniquement du template de la carte Leaflet
+        setHtmlCarteTrajet(`
 <!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>html,body,#c{height:100%;margin:0;padding:0;}</style></head>
+<style>
+  html, body, #c { height: 100%; margin: 0; padding: 0; }
+  
+  /* Style du cercle bleu animé */
+  .user-location-dot {
+    position: relative;
+    width: 16px;
+    height: 16px;
+    background-color: #0066FF;
+    border: 3px solid #FFFFFF;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(0, 102, 255, 0.8);
+  }
+
+  .user-location-dot::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background-color: rgba(0, 102, 255, 0.35);
+    animation: pulse 2s infinite ease-out;
+    z-index: -1;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+</style></head>
 <body><div id="c"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  const map = L.map('c');
+  const map = L.map('c', { zoomControl: false });
   const pts = [[${latitude},${longitude}],[${latP},${lonP}]];
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-  L.marker(pts[0]).addTo(map).bindPopup('Vous');
+
+  // Marqueur utilisateur en cercle bleu pulsant
+  const userIcon = L.divIcon({
+    className: 'user-location-dot',
+    iconSize: [16, 16],
+    iconAnchor: [8, 8]
+  });
+  L.marker(pts[0], { icon: userIcon }).addTo(map).bindPopup('Votre position');
+
+  // Marqueur prestataire classique (épingle)
   L.marker(pts[1]).addTo(map).bindPopup('Prestataire');
-  L.polyline(pts, {color:'#0F62FE'}).addTo(map);
-  map.fitBounds(pts, {padding:[30,30]});
+
+  L.polyline(pts, { color: '#0F62FE', weight: 4, opacity: 0.8 }).addTo(map);
+  map.fitBounds(pts, { padding: [35, 35] });
 </script></body></html>`);
-    } catch (erreur) {
-      console.log('Erreur chargement itinéraire/ETA:', erreur);
-    } finally {
-      setChargementEta(false);
-    }
-  })();
-}, [prestataireId]);
+      } catch (erreur) {
+        console.log('Erreur chargement itinéraire/ETA:', erreur);
+      } finally {
+        setChargementEta(false);
+      }
+    })();
+  }, [prestataireId]);
 
   async function handleEnvoyerAvis() {
     if (noteChoisie === 0) {
@@ -273,19 +313,6 @@ useEffect(() => {
         </View>
       )}
 
-      <Text style={styles.titreSection}>Publications</Text>
-      {publications.length === 0 ? (
-        <Text style={styles.videTexte}>Aucune publication pour le moment.</Text>
-      ) : (
-        publications.map((pub) => (
-          <CartePublication
-            key={pub.id}
-            publication={pub}
-            onPress={() => navigation.navigate('PublicationDetail', { publication: pub })}
-          />
-        ))
-      )}
-
       <Text style={styles.titreSection}>Avis clients</Text>
       {avis.length === 0 ? (
         <Text style={styles.videTexte}>Aucun avis pour le moment.</Text>
@@ -308,8 +335,8 @@ useEffect(() => {
           </View>
         ))
       )}
-
-      {!chargementEta && eta && (
+      
+  {!chargementEta && eta && (
         <View style={styles.blocEta}>
           <Text style={styles.titreSection}>Itinéraire estimé</Text>
           <Text style={styles.etaTexte}>
@@ -329,11 +356,27 @@ useEffect(() => {
 
           {htmlCarteTrajet && (
             <View style={styles.carteTrajetConteneur}>
-              <WebView source={{ html: htmlCarteTrajet }} />
+              <WebView source={{ html: htmlCarteTrajet }} scrollEnabled={false} />
             </View>
           )}
         </View>
-      )}      
+      )}   
+
+      <Text style={styles.titreSection}>Publications</Text>
+      {publications.length === 0 ? (
+        <Text style={styles.videTexte}>Aucune publication pour le moment.</Text>
+      ) : (
+        publications.map((pub) => (
+          <CartePublication
+            key={pub.id}
+            publication={pub}
+            onPress={() => navigation.navigate('PublicationDetail', { publication: pub })}
+          />
+        ))
+      )}
+
+
+       
     </ScrollView>
   );
 }
