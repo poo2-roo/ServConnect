@@ -13,8 +13,8 @@ export default function DeclarerStructureScreen({ navigation }: any) {
   const [enregistrement, setEnregistrement] = useState(false);
 
   function handleContinuer() {
-    if (!nomStructure.trim() || !quartier.trim()) {
-      Alert.alert('Champs manquants', 'Merci de remplir le nom et le quartier.');
+    if (!nomStructure.trim() || !quartier.trim() || !adresseTexte.trim()) {
+      Alert.alert('Champs manquants', 'Merci de remplir le nom, le quartier et la description de l\'adresse.');
       return;
     }
     setEtape('carte');

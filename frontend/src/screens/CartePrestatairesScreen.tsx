@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
@@ -12,7 +12,7 @@ import { espacements } from '../theme/styles';
 function genererHtmlCarte(lat: number, lon: number, marqueurs: any[]): string {
   const marqueursJs = marqueurs.map((m) => `
     L.marker([${m.lat}, ${m.lon}]).addTo(map)
-      .bindPopup('<b>${m.nom.replace(/'/g, "")}</b><br/>${m.categories.replace(/'/g, "")}<br/><a href="#" onclick="envoyer(${m.prestataireId})">Voir le profil</a>');
+      .bindPopup('<b>' + ${JSON.stringify(m.nom)} + '</b><br/>' + ${JSON.stringify(m.categories)} + '<br/><a href="#" onclick="envoyer(event, ${m.prestataireId})">Voir le profil</a>');
   `).join('\n');
 
   return `
@@ -29,7 +29,8 @@ function genererHtmlCarte(lat: number, lon: number, marqueurs: any[]): string {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
   L.circleMarker([${lat}, ${lon}], {color: '#0F62FE', radius: 8}).addTo(map).bindPopup('Vous êtes ici');
   ${marqueursJs}
-  function envoyer(id) {
+  function envoyer(e, id) {
+    e.preventDefault();
     window.ReactNativeWebView.postMessage(JSON.stringify({ prestataireId: id }));
   }
 </script>
@@ -59,38 +60,57 @@ export default function CartePrestatairesScreen({ route, navigation }: any) {
           recupererPrestataires(),
         ]);
 
-        const prestatairesParId: Record<number, Prestataire> = {};
-        prestataires.forEach((p) => { prestatairesParId[p.id] = p; });
+        // Extraction sécurisée si l'API renvoie { results: [...] } ou un tableau direct
+        const listeLocalisations = Array.isArray(localisations) 
+          ? localisations 
+          : (localisations as any)?.results || [];
 
-        const marqueurs = localisations
-          .map((loc) => {
-            const p = prestatairesParId[loc.properties.prestataire];
+        const prestatairesParId: Record<number, Prestataire> = {};
+        if (Array.isArray(prestataires)) {
+          prestataires.forEach((p) => { prestatairesParId[p.id] = p; });
+        }
+
+        const marqueurs = listeLocalisations
+          .map((loc: any) => {
+            const pId = loc?.properties?.prestataire ?? loc?.prestataire;
+            const p = prestatairesParId[pId];
             if (!p) return null;
+
             if (categorieId && !p.categories.some((c) => c.id === categorieId)) return null;
             if (recherche && !(p.nom_entreprise || '').toLowerCase().includes(recherche.toLowerCase())) return null;
+
+            const coords = loc?.geometry?.coordinates;
+            const lon = coords ? parseFloat(coords[0]) : parseFloat(loc?.longitude);
+            const lat = coords ? parseFloat(coords[1]) : parseFloat(loc?.latitude);
+
+            if (isNaN(lat) || isNaN(lon)) return null;
+
             return {
-              lat: loc.geometry.coordinates[1],
-              lon: loc.geometry.coordinates[0],
-              nom: p.nom_entreprise || p.utilisateur.username,
-              categories: p.categories.map((c) => c.nom).join(', '),
+              lat,
+              lon,
+              nom: p.nom_entreprise || p.utilisateur?.username || 'Prestataire',
+              categories: (p.categories || []).map((c) => c.nom).join(', '),
               prestataireId: p.id,
             };
           })
           .filter(Boolean);
 
         setHtml(genererHtmlCarte(latitude, longitude, marqueurs as any[]));
-      } catch {
-        setErreur('Impossible de charger la carte.');
+      } catch (erreur: any) {
+        console.log('Erreur carte:', JSON.stringify(erreur?.response?.data || erreur?.message || erreur));
+        setErreur(`Erreur lors du chargement de la carte.`);
       } finally {
         setChargement(false);
       }
     })();
-  }, []);
+  }, [categorieId, recherche]);
 
   function handleMessage(event: any) {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      navigation.navigate('PrestataireDetail', { prestataireId: data.prestataireId });
+      if (data?.prestataireId) {
+        navigation.navigate('PrestataireDetail', { prestataireId: data.prestataireId });
+      }
     } catch {}
   }
 
