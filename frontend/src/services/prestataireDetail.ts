@@ -53,13 +53,6 @@ export async function recupererLocalisationPrestataire(prestataireId: string) {
 }
 
 export async function recupererETA(localisationId: number, lat: number, lon: number) {
-  try {
-    const response = await api.get(`/api/geolocation/localisations/${localisationId}/eta/`, {
-      params: { lat, lon },
-    });
-    return response.data;
-  } catch (erreur) {
-    console.log('Erreur API recupererETA:', erreur);
-    throw erreur;
-  }
+  const r = await api.get(`/api/geolocation/localisations/${localisationId}/eta/`, { params: { lat, lon } });
+  return r.data;
 }

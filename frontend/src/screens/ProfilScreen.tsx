@@ -249,10 +249,16 @@ export default function ProfilScreen({ navigation }: any) {
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[stylesPartages.boutonContour, { width: '100%', marginBottom: espacements.md }]}
-        onPress={() => navigation.navigate('DeclarerStructure')}
+        style={[stylesPartages.boutonContour, { width: '100%', marginBottom: espacements.sm }]}
+        onPress={() => navigation.navigate('MesStructures')}
       >
-        <Text style={stylesPartages.boutonContourTexte}>Déclarer ma structure (position)</Text>
+        <Text style={stylesPartages.boutonContourTexte}>Gérer mes structures</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[stylesPartages.boutonContour, { width: '100%', marginBottom: espacements.md }]}
+        onPress={() => navigation.navigate('MesServices')}
+      >
+        <Text style={stylesPartages.boutonContourTexte}>Gérer mes services</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.boutonDeconnexion} onPress={deconnexion}>

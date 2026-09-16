@@ -35,3 +35,14 @@ export async function optimiserPrixService(serviceId: number): Promise<{
 export async function mettreAJourPrixService(serviceId: number, prixMin: number): Promise<void> {
   await api.patch(`/api/services/services/${serviceId}/`, { prix_min: prixMin });
 }
+
+export async function modifierService(serviceId: number, donnees: {
+  titre?: string; description?: string; prix_min?: number; est_actif?: boolean;
+}) {
+  const r = await api.patch(`/api/services/services/${serviceId}/`, donnees);
+  return r.data;
+}
+
+export async function supprimerService(serviceId: number) {
+  await api.delete(`/api/services/services/${serviceId}/`);
+}
