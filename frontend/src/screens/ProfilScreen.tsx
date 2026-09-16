@@ -255,7 +255,9 @@ export default function ProfilScreen({ navigation }: any) {
         <Text style={stylesPartages.boutonContourTexte}>Déclarer ma structure (position)</Text>
       </TouchableOpacity>
 
-
+      <TouchableOpacity style={styles.boutonDeconnexion} onPress={deconnexion}>
+        <Text style={styles.boutonDeconnexionTexte}>Se déconnecter</Text>
+      </TouchableOpacity>
             <Text style={styles.titreSection}>Mon activité</Text>
             {enEditionPrestataire ? (
               <View key="edition-activite">
@@ -334,9 +336,7 @@ export default function ProfilScreen({ navigation }: any) {
         </View>
       )}
 
-      <TouchableOpacity style={styles.boutonDeconnexion} onPress={deconnexion}>
-        <Text style={styles.boutonDeconnexionTexte}>Se déconnecter</Text>
-      </TouchableOpacity>
+
     </ScrollView>
   );
 }
