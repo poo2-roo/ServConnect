@@ -1,7 +1,20 @@
+from django.db import models
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
+
+
+
+from datetime import timedelta
+from django.utils import timezone
+from rest_framework.views import APIView
+
+
+
+from .models import Litige, Utilisateur
+from .permissions import EstAdministrateur
+from .serializers import AdminUtilisateurDetailSerializer, LitigeSerializer
 from .models import Client, Prestataire, Utilisateur
 from .serializers import (
     ClientLocalisationSerializer,
@@ -259,3 +272,130 @@ class ClientLocalisationUpdateView(generics.UpdateAPIView):
         if client is None:
             raise PermissionDenied("Vous n'avez pas de profil client.")
         return client    
+
+
+
+
+class AdminUtilisateursListView(generics.ListAPIView):
+    """GET /api/accounts/admin/utilisateurs/ — Liste tous les utilisateurs avec filtres et recherche."""
+    permission_classes = [EstAdministrateur]
+    serializer_class = AdminUtilisateurDetailSerializer
+
+    def get_queryset(self):
+        queryset = Utilisateur.objects.exclude(role=Utilisateur.Role.ADMINISTRATEUR)
+        role = self.request.query_params.get('role')
+        recherche = self.request.query_params.get('q')
+
+        if role:
+            queryset = queryset.filter(role=role)
+        if recherche:
+            queryset = queryset.filter(
+                models.Q(username__icontains=recherche) |
+                models.Q(email__icontains=recherche) |
+                models.Q(telephone__icontains=recherche)
+            )
+        return queryset
+
+
+class AdminUtilisateurDetailView(generics.RetrieveAPIView):
+    """GET /api/accounts/admin/utilisateurs/<id>/ — Profil détaillé d'un utilisateur pour l'admin."""
+    permission_classes = [EstAdministrateur]
+    queryset = Utilisateur.objects.all()
+    serializer_class = AdminUtilisateurDetailSerializer
+
+
+class AdminSanctionnerUtilisateurView(APIView):
+    """POST /api/accounts/admin/utilisateurs/<id>/sanctionner/ — Appliquer un blocage ou une suspension."""
+    permission_classes = [EstAdministrateur]
+
+    def post(self, request, pk):
+        try:
+            utilisateur = Utilisateur.objects.get(pk=pk)
+        except Utilisateur.DoesNotExist:
+            return Response({"detail": "Utilisateur introuvable."}, status=404)
+
+        type_sanction = request.data.get('type_sanction') # 'suspension' ou 'blocage'
+        motif = request.data.get('motif', '')
+        duree_jours = request.data.get('duree_jours', 7)
+
+        if type_sanction == 'blocage':
+            utilisateur.est_bloque = True
+            utilisateur.date_fin_suspension = None
+        elif type_sanction == 'suspension':
+            utilisateur.est_bloque = False
+            utilisateur.date_fin_suspension = timezone.now() + timedelta(days=int(duree_jours))
+        else:
+            return Response({"detail": "Type de sanction invalide."}, status=400)
+
+        utilisateur.motif_sanction = motif
+        utilisateur.save()
+        return Response(AdminUtilisateurDetailSerializer(utilisateur).data)
+
+
+class AdminLeverSanctionView(APIView):
+    """POST /api/accounts/admin/utilisateurs/<id>/lever-sanction/ — Annuler blocage et suspension."""
+    permission_classes = [EstAdministrateur]
+
+    def post(self, request, pk):
+        try:
+            utilisateur = Utilisateur.objects.get(pk=pk)
+        except Utilisateur.DoesNotExist:
+            return Response({"detail": "Utilisateur introuvable."}, status=404)
+
+        utilisateur.est_bloque = False
+        utilisateur.date_fin_suspension = None
+        utilisateur.motif_sanction = ''
+        utilisateur.save()
+        return Response(AdminUtilisateurDetailSerializer(utilisateur).data)
+
+
+class LitigeListCreateView(generics.ListCreateAPIView):
+    """GET/POST /api/accounts/litiges/ — Lister ou signaler un utilisateur."""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = LitigeSerializer
+
+    def get_queryset(self):
+        if getattr(self.request.user, 'role', None) == Utilisateur.Role.ADMINISTRATEUR:
+            statut = self.request.query_params.get('statut')
+            if statut:
+                return Litige.objects.filter(statut=statut)
+            return Litige.objects.all()
+        return Litige.objects.filter(signale_par=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(signale_par=self.request.user)
+
+
+class AdminResoudreLitigeView(APIView):
+    """POST /api/accounts/admin/litiges/<id>/resoudre/ — Traiter et fermer un litige."""
+    permission_classes = [EstAdministrateur]
+
+    def post(self, request, pk):
+        try:
+            litige = Litige.objects.get(pk=pk)
+        except Litige.DoesNotExist:
+            return Response({"detail": "Litige introuvable."}, status=404)
+
+        type_sanction = request.data.get('type_sanction', Litige.TypeSanction.AUCUNE)
+        duree_jours = request.data.get('duree_jours')
+        commentaire = request.data.get('commentaire_resolution', '')
+
+        utilisateur = litige.utilisateur
+
+        if type_sanction == Litige.TypeSanction.BLOCAGE:
+            utilisateur.est_bloque = True
+            utilisateur.motif_sanction = litige.motif
+            utilisateur.save()
+        elif type_sanction == Litige.TypeSanction.SUSPENSION and duree_jours:
+            utilisateur.date_fin_suspension = timezone.now() + timedelta(days=int(duree_jours))
+            utilisateur.motif_sanction = litige.motif
+            utilisateur.save()
+
+        litige.statut = Litige.Statut.RESOLU
+        litige.type_sanction = type_sanction
+        litige.duree_jours = duree_jours
+        litige.commentaire_resolution = commentaire
+        litige.date_resolution = timezone.now()
+        litige.save()
+
+        return Response(LitigeSerializer(litige).data)

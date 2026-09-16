@@ -1,28 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, ScrollView,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ActivityIndicator, Alert, ScrollView, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { recupererPrestatairesEnAttente, validerKYC, creerCategorie, supprimerCategorie } from '../services/admin';
+import {
+  recupererPrestatairesEnAttente, validerKYC,
+  creerCategorie, supprimerCategorie,
+  recupererLitiges, resoudreLitige,
+} from '../services/admin';
 import { recupererCategories } from '../services/annuaire';
-import { Prestataire, Categorie } from '../types';
+import { Prestataire, Categorie, Litige } from '../types';
 import { couleurs } from '../theme/colors';
-import { rayons, espacements, stylesPartages } from '../theme/styles';
+import { rayons, espacements } from '../theme/styles';
 
 export default function AdminDashboardScreen() {
   const { deconnexion } = useAuth();
   const [enAttente, setEnAttente] = useState<Prestataire[]>([]);
   const [categories, setCategories] = useState<Categorie[]>([]);
+  const [litiges, setLitiges] = useState<Litige[]>([]);
   const [nouvelleCategorie, setNouvelleCategorie] = useState('');
   const [chargement, setChargement] = useState(true);
 
+  // États pour la modale de litige
+  const [litigeSelectionne, setLitigeSelectionne] = useState<Litige | null>(null);
+  const [typeSanction, setTypeSanction] = useState<'aucune' | 'suspension' | 'blocage'>('aucune');
+  const [dureeJours, setDureeJours] = useState('7');
+  const [commentaire, setCommentaire] = useState('');
+
   async function charger() {
     try {
-      const [p, c] = await Promise.all([recupererPrestatairesEnAttente(), recupererCategories()]);
+      const [p, c, l] = await Promise.all([
+        recupererPrestatairesEnAttente(),
+        recupererCategories(),
+        recupererLitiges('ouvert'),
+      ]);
       setEnAttente(p);
       setCategories(c);
+      setLitiges(l);
     } finally {
       setChargement(false);
     }
@@ -30,12 +46,29 @@ export default function AdminDashboardScreen() {
 
   useEffect(() => { charger(); }, []);
 
-  async function handleValider(id: number, decision: 'verifie' | 'rejete') {
+  async function handleValiderKYC(id: number, decision: 'verifie' | 'rejete') {
     try {
       await validerKYC(id, decision);
       setEnAttente((prev) => prev.filter((p) => p.id !== id));
     } catch {
-      Alert.alert('Erreur', 'Action impossible.');
+      Alert.alert('Erreur', 'Action KYC impossible.');
+    }
+  }
+
+  async function handleResoudreLitige() {
+    if (!litigeSelectionne) return;
+    try {
+      await resoudreLitige(litigeSelectionne.id, {
+        type_sanction: typeSanction,
+        duree_jours: typeSanction === 'suspension' ? parseInt(dureeJours) : null,
+        commentaire_resolution: commentaire,
+      });
+      setLitiges((prev) => prev.filter((l) => l.id !== litigeSelectionne.id));
+      setLitigeSelectionne(null);
+      setCommentaire('');
+      Alert.alert('Succès', 'Le litige a été traité.');
+    } catch {
+      Alert.alert('Erreur', 'Impossible de résoudre le litige.');
     }
   }
 
@@ -55,7 +88,7 @@ export default function AdminDashboardScreen() {
       await supprimerCategorie(id);
       setCategories((prev) => prev.filter((c) => c.id !== id));
     } catch {
-      Alert.alert('Erreur', 'Impossible de supprimer (des services y sont peut-être liés).');
+      Alert.alert('Erreur', 'Impossible de supprimer la catégorie.');
     }
   }
 
@@ -72,6 +105,27 @@ export default function AdminDashboardScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* SECTION LITIGES */}
+      <Text style={styles.titreSection}>Litiges & Signalements ({litiges.length})</Text>
+      {litiges.length === 0 ? (
+        <Text style={styles.vide}>Aucun litige ouvert.</Text>
+      ) : (
+        litiges.map((l) => (
+          <View key={l.id} style={styles.carte}>
+            <Text style={styles.nomCarte}>Mis en cause : {l.utilisateur_nom} ({l.utilisateur_role})</Text>
+            <Text style={styles.souscarte}>Motif : {l.motif}</Text>
+            <Text style={styles.souscarte}>Signalé par : {l.signale_par_nom || 'Anonyme'}</Text>
+            <TouchableOpacity
+              style={[styles.boutonAction, { backgroundColor: couleurs.bleuBase }]}
+              onPress={() => { setLitigeSelectionne(l); setTypeSanction('aucune'); }}
+            >
+              <Text style={styles.boutonTexte}>Traiter le litige</Text>
+            </TouchableOpacity>
+          </View>
+        ))
+      )}
+
+      {/* SECTION KYC */}
       <Text style={styles.titreSection}>KYC en attente ({enAttente.length})</Text>
       {enAttente.length === 0 ? (
         <Text style={styles.vide}>Aucun dossier en attente.</Text>
@@ -81,10 +135,10 @@ export default function AdminDashboardScreen() {
             <Text style={styles.nomCarte}>{p.nom_entreprise || p.utilisateur.username}</Text>
             <Text style={styles.souscarte}>{p.utilisateur.telephone}</Text>
             <View style={styles.rangeeBoutons}>
-              <TouchableOpacity style={[styles.boutonPetit, { backgroundColor: '#24A148' }]} onPress={() => handleValider(p.id, 'verifie')}>
+              <TouchableOpacity style={[styles.boutonPetit, { backgroundColor: '#24A148' }]} onPress={() => handleValiderKYC(p.id, 'verifie')}>
                 <Text style={styles.boutonPetitTexte}>Approuver</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.boutonPetit, { backgroundColor: '#DA1E28' }]} onPress={() => handleValider(p.id, 'rejete')}>
+              <TouchableOpacity style={[styles.boutonPetit, { backgroundColor: '#DA1E28' }]} onPress={() => handleValiderKYC(p.id, 'rejete')}>
                 <Text style={styles.boutonPetitTexte}>Rejeter</Text>
               </TouchableOpacity>
             </View>
@@ -92,6 +146,7 @@ export default function AdminDashboardScreen() {
         ))
       )}
 
+      {/* SECTION CATÉGORIES */}
       <Text style={styles.titreSection}>Catégories ({categories.length})</Text>
       <View style={styles.rangeeAjoutCategorie}>
         <TextInput
@@ -112,6 +167,55 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
         </View>
       ))}
+
+      {/* MODALE DE RÉSOLUTION DE LITIGE */}
+      <Modal visible={!!litigeSelectionne} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitre}>Décision pour le litige #{litigeSelectionne?.id}</Text>
+
+            <Text style={styles.label}>Sanction :</Text>
+            <View style={styles.rangeeChips}>
+              {(['aucune', 'suspension', 'blocage'] as const).map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.chip, typeSanction === s && styles.chipActif]}
+                  onPress={() => setTypeSanction(s)}
+                >
+                  <Text style={typeSanction === s ? styles.chipTexteActif : styles.chipTexte}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {typeSanction === 'suspension' && (
+              <TextInput
+                style={styles.champ}
+                placeholder="Durée (en jours)"
+                keyboardType="numeric"
+                value={dureeJours}
+                onChangeText={setDureeJours}
+              />
+            )}
+
+            <TextInput
+              style={[styles.champ, { height: 80, marginTop: espacements.xs }]}
+              placeholder="Commentaire de résolution..."
+              multiline
+              value={commentaire}
+              onChangeText={setCommentaire}
+            />
+
+            <View style={styles.rangeeBoutonsModal}>
+              <TouchableOpacity style={[styles.boutonPetit, { backgroundColor: '#24A148' }]} onPress={handleResoudreLitige}>
+                <Text style={styles.boutonPetitTexte}>Valider</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.boutonPetit, { backgroundColor: '#DA1E28' }]} onPress={() => setLitigeSelectionne(null)}>
+                <Text style={styles.boutonPetitTexte}>Annuler</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -125,15 +229,27 @@ const styles = StyleSheet.create({
   vide: { color: couleurs.neutre, fontSize: 13 },
   carte: { backgroundColor: couleurs.blanc, borderRadius: rayons.moyen, padding: espacements.sm, marginBottom: espacements.sm },
   nomCarte: { fontWeight: '600', color: couleurs.tertiaire },
-  souscarte: { fontSize: 12, color: couleurs.neutre, marginBottom: espacements.xs },
-  rangeeBoutons: { flexDirection: 'row', gap: espacements.xs },
-  boutonPetit: { flex: 1, borderRadius: rayons.moyen, paddingVertical: 8, alignItems: 'center' },
+  souscarte: { fontSize: 12, color: couleurs.neutre, marginVertical: 2 },
+  rangeeBoutons: { flexDirection: 'row', gap: espacements.xs, marginTop: espacements.xs },
+  boutonAction: { paddingVertical: 8, borderRadius: rayons.moyen, alignItems: 'center', marginTop: espacements.xs },
+  boutonTexte: { color: couleurs.blanc, fontSize: 12, fontWeight: '600' },
+  boutonPetit: { flex: 1, borderRadius: rayons.moyen, paddingVertical: 10, alignItems: 'center' },
   boutonPetitTexte: { color: couleurs.blanc, fontSize: 12, fontWeight: '600' },
   rangeeAjoutCategorie: { flexDirection: 'row', gap: espacements.xs, marginBottom: espacements.sm },
-  champ: { flex: 1, borderWidth: 1, borderColor: couleurs.bordure, borderRadius: rayons.moyen, padding: 10, backgroundColor: couleurs.blanc },
+  champ: { borderWidth: 1, borderColor: couleurs.bordure, borderRadius: rayons.moyen, padding: 10, backgroundColor: couleurs.blanc },
   boutonAjouter: { backgroundColor: couleurs.bleuBase, borderRadius: rayons.moyen, width: 44, justifyContent: 'center', alignItems: 'center' },
   ligneCategorie: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: couleurs.blanc, borderRadius: rayons.moyen, padding: espacements.sm, marginBottom: espacements.xs,
   },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: espacements.md },
+  modalContent: { backgroundColor: couleurs.blanc, borderRadius: rayons.moyen, padding: espacements.md },
+  modalTitre: { fontSize: 16, fontWeight: 'bold', color: couleurs.tertiaire, marginBottom: espacements.sm },
+  label: { fontSize: 13, fontWeight: '600', color: couleurs.tertiaire, marginBottom: espacements.xs },
+  rangeeChips: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: espacements.sm },
+  chip: { padding: 8, borderWidth: 1, borderColor: couleurs.bordure, borderRadius: rayons.moyen, flex: 0.3, alignItems: 'center' },
+  chipActif: { backgroundColor: couleurs.bleuBase, borderColor: couleurs.bleuBase },
+  chipTexte: { color: couleurs.tertiaire, fontSize: 12 },
+  chipTexteActif: { color: couleurs.blanc, fontSize: 12, fontWeight: 'bold' },
+  rangeeBoutonsModal: { flexDirection: 'row', gap: espacements.xs, marginTop: espacements.md },
 });

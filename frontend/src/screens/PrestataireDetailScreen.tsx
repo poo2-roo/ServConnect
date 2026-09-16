@@ -18,6 +18,7 @@ import { Prestataire, Avis, Service } from '../types';
 import { couleurs } from '../theme/colors';
 import { rayons, espacements, stylesPartages } from '../theme/styles';
 import SelecteurEtoiles from '../components/SelecteurEtoiles';
+import { CreerLitigeModal } from '../components/CreerLitigeModal';
 
 const AVATAR_PLACEHOLDER = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&q=80';
 
@@ -35,14 +36,16 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
   const [commentaireAvis, setCommentaireAvis] = useState('');
   const [envoiAvisEnCours, setEnvoiAvisEnCours] = useState(false);
 
-  // Gestion multi-structures : accordéon + ETA calculé à la demande, par structure
+  // État pour la modale de signalement
+  const [modalLitigeVisible, setModalLitigeVisible] = useState(false);
+
+  // Gestion multi-structures : accordéon + ETA calculé à la demande
   const [structures, setStructures] = useState<any[]>([]);
   const [positionClient, setPositionClient] = useState<{ lat: number; lon: number } | null>(null);
   const [structureSelectionneeId, setStructureSelectionneeId] = useState<number | null>(null);
   const [etaParStructure, setEtaParStructure] = useState<Record<number, any>>({});
   const [chargementEtaId, setChargementEtaId] = useState<number | null>(null);
 
-  // Charger les détails du prestataire, avis, services, publications
   useEffect(() => {
     (async () => {
       try {
@@ -62,7 +65,6 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
     })();
   }, [prestataireId]);
 
-  // Charger la liste des structures + la position du client (sans calculer d'ETA tant que rien n'est sélectionné)
   useEffect(() => {
     (async () => {
       try {
@@ -165,6 +167,7 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
   }
 
   const note = parseFloat(prestataire.note_moyenne || '0');
+  const nomComplet = prestataire.nom_entreprise || `${prestataire.utilisateur.first_name} ${prestataire.utilisateur.last_name}`;
 
   return (
     <ScrollView style={styles.conteneur} contentContainerStyle={styles.scroll}>
@@ -173,9 +176,7 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
       </TouchableOpacity>
 
       <Image source={{ uri: prestataire.utilisateur.photo_profil || AVATAR_PLACEHOLDER }} style={styles.avatar} />
-      <Text style={styles.nom}>
-        {prestataire.nom_entreprise || `${prestataire.utilisateur.first_name} ${prestataire.utilisateur.last_name}`}
-      </Text>
+      <Text style={styles.nom}>{nomComplet}</Text>
 
       <View style={styles.ligneNote}>
         <Ionicons name="star" size={16} color={couleurs.etoile} />
@@ -199,13 +200,28 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
 
       {prestataire.description && <Text style={styles.description}>{prestataire.description}</Text>}
 
-      <TouchableOpacity style={stylesPartages.boutonPrincipal} onPress={handleEnvoyerMessage} disabled={creationConversation}>
-        {creationConversation ? (
-          <ActivityIndicator color={couleurs.blanc} />
-        ) : (
-          <Text style={stylesPartages.boutonPrincipalTexte}>Envoyer un message</Text>
-        )}
-      </TouchableOpacity>
+      {/* Rangée d'actions : Message + Signalement */}
+      <View style={styles.rangeeActions}>
+        <TouchableOpacity
+          style={[stylesPartages.boutonPrincipal, { flex: 1, height: 44 }]}
+          onPress={handleEnvoyerMessage}
+          disabled={creationConversation}
+        >
+          {creationConversation ? (
+            <ActivityIndicator color={couleurs.blanc} />
+          ) : (
+            <Text style={stylesPartages.boutonPrincipalTexte}>Envoyer un message</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.boutonSignalerIcone}
+          onPress={() => setModalLitigeVisible(true)}
+          accessibilityLabel="Signaler ce prestataire"
+        >
+          <Ionicons name="flag-outline" size={20} color="#DA1E28" />
+        </TouchableOpacity>
+      </View>
 
       <Text style={styles.titreSection}>Services proposés</Text>
       {services.length === 0 ? (
@@ -328,6 +344,14 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
           />
         ))
       )}
+
+      {/* Modale de Création de Litige */}
+      <CreerLitigeModal
+        visible={modalLitigeVisible}
+        onClose={() => setModalLitigeVisible(false)}
+        utilisateurCibleId={prestataire.utilisateur.id}
+        utilisateurCibleNom={nomComplet}
+      />
     </ScrollView>
   );
 }
@@ -355,6 +379,17 @@ const styles = StyleSheet.create({
   badgeVerifieTexte: { color: couleurs.blanc, fontSize: 10, fontWeight: '600' },
   rangeeCategories: { flexDirection: 'row', flexWrap: 'wrap', gap: espacements.xs, marginTop: espacements.sm, marginBottom: espacements.sm, justifyContent: 'center' },
   description: { fontSize: 13, color: couleurs.neutre, textAlign: 'center', marginBottom: espacements.md, lineHeight: 18 },
+  rangeeActions: { flexDirection: 'row', width: '100%', gap: espacements.xs, alignItems: 'center', marginBottom: espacements.md },
+  boutonSignalerIcone: {
+    width: 44,
+    height: 44,
+    borderRadius: rayons.moyen,
+    backgroundColor: '#FFF0F0',
+    borderWidth: 1,
+    borderColor: '#FFC1C1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   titreSection: { alignSelf: 'flex-start', fontWeight: '600', color: couleurs.tertiaire, marginTop: espacements.lg, marginBottom: espacements.sm },
   videTexte: { alignSelf: 'flex-start', color: couleurs.neutre, fontSize: 13 },
   carteService: {

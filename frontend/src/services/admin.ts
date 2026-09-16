@@ -31,3 +31,23 @@ export async function basculerActivationCompte(utilisateurId: number): Promise<{
   const r = await api.post(`/api/accounts/admin/utilisateurs/${utilisateurId}/basculer-activation/`);
   return r.data;
 }
+
+
+import { Litige } from '../types';
+
+export async function recupererLitiges(statut = 'ouvert'): Promise<Litige[]> {
+  const response = await api.get<Litige[]>(`/accounts/litiges/?statut=${statut}`);
+  return response.data;
+}
+
+export async function resoudreLitige(
+  id: number,
+  payload: {
+    type_sanction: 'aucune' | 'suspension' | 'blocage';
+    duree_jours?: number | null;
+    commentaire_resolution?: string;
+  }
+): Promise<Litige> {
+  const response = await api.post<Litige>(`/accounts/admin/litiges/${id}/resoudre/`, payload);
+  return response.data;
+}

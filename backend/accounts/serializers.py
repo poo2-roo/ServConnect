@@ -3,12 +3,13 @@ from django.contrib.auth import authenticate
 from services.models import Categorie
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.utils import timezone
 
 from .models import Administrateur, Client, Prestataire, Utilisateur
 
 
 class ConnexionSerializer(TokenObtainPairSerializer):
-    """Authentifie un utilisateur avec son email ou son numéro de téléphone."""
+    """Authentifie un utilisateur avec son email ou son numéro de téléphone et vérifie les sanctions."""
 
     identifier = serializers.CharField(write_only=True)
 
@@ -34,12 +35,29 @@ class ConnexionSerializer(TokenObtainPairSerializer):
         if utilisateur_authentifie is None:
             raise serializers.ValidationError('Email, téléphone ou mot de passe incorrect.')
 
+        # --- VÉRIFICATION DES SANCTIONS ---
+        if utilisateur_authentifie.est_bloque:
+            raise serializers.ValidationError(
+                f"Votre compte a été bloqué définitivement. Motif : {utilisateur_authentifie.motif_sanction or 'Non spécifié'}"
+            )
+
+        if utilisateur_authentifie.date_fin_suspension:
+            if utilisateur_authentifie.date_fin_suspension > timezone.now():
+                date_str = utilisateur_authentifie.date_fin_suspension.strftime("%d/%m/%Y à %H:%M")
+                raise serializers.ValidationError(
+                    f"Votre compte est suspendu jusqu'au {date_str}. Motif : {utilisateur_authentifie.motif_sanction or 'Non spécifié'}"
+                )
+            else:
+                # Suspension expirée : levée automatique
+                utilisateur_authentifie.date_fin_suspension = None
+                utilisateur_authentifie.save(update_fields=['date_fin_suspension'])
+
         return super().validate({
             'username': utilisateur.username,
             'password': password,
         })
 
-
+    
 class UtilisateurSerializer(serializers.ModelSerializer):
     """Représentation en lecture d'un utilisateur (pour l'API)."""
 
@@ -157,3 +175,38 @@ class ClientLocalisationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = ['latitude', 'longitude', 'adresse_habituelle']
+
+
+from .models import Litige
+
+class LitigeSerializer(serializers.ModelSerializer):
+    utilisateur_nom = serializers.CharField(source='utilisateur.username', read_only=True)
+    utilisateur_role = serializers.CharField(source='utilisateur.role', read_only=True)
+    signale_par_nom = serializers.CharField(source='signale_par.username', read_only=True, default=None)
+
+    class Meta:
+        model = Litige
+        fields = [
+            'id', 'utilisateur', 'utilisateur_nom', 'utilisateur_role',
+            'signale_par', 'signale_par_nom', 'motif', 'statut',
+            'type_sanction', 'duree_jours', 'commentaire_resolution',
+            'date_creation', 'date_resolution'
+        ]
+        read_only_fields = ['id', 'statut', 'date_creation', 'date_resolution']
+
+
+class AdminUtilisateurDetailSerializer(serializers.ModelSerializer):
+    est_suspendu = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Utilisateur
+        fields = [
+            'id', 'username', 'email', 'telephone', 'role',
+            'is_active', 'est_bloque', 'date_fin_suspension',
+            'motif_sanction', 'est_suspendu', 'date_creation'
+        ]
+
+    def get_est_suspendu(self, obj):
+        if obj.date_fin_suspension:
+            return obj.date_fin_suspension > timezone.now()
+        return False

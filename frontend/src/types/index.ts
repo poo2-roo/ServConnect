@@ -98,3 +98,19 @@ export interface Message {
   est_lu: boolean;
   date_envoi: string;
 }
+
+export interface Litige {
+  id: number;
+  utilisateur: number;
+  utilisateur_nom: string;
+  utilisateur_role: string;
+  signale_par: number | null;
+  signale_par_nom: string | null;
+  motif: string;
+  statut: 'ouvert' | 'resolu';
+  type_sanction: 'aucune' | 'suspension' | 'blocage';
+  duree_jours?: number | null;
+  commentaire_resolution?: string;
+  date_creation: string;
+  date_resolution?: string;
+}

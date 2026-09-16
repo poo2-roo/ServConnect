@@ -6,12 +6,15 @@ from .models import Administrateur, Client, Prestataire, Utilisateur
 
 @admin.register(Utilisateur)
 class UtilisateurAdmin(UserAdmin):
-    list_display = ('username', 'telephone', 'role', 'email', 'is_active')
-    list_filter = ('role', 'is_active', 'langue_preferee')
+    list_display = ('username', 'telephone', 'role', 'email', 'is_active', 'est_bloque')
+    list_filter = ('role', 'is_active', 'est_bloque', 'langue_preferee')
     fieldsets = UserAdmin.fieldsets + (
         ('Informations ServConnect', {
             'fields': ('telephone', 'role', 'photo_profil', 'date_naissance',
                        'langue_preferee', 'telephone_verifie'),
+        }),
+        ('Sanctions & Modération', {
+            'fields': ('est_bloque', 'date_fin_suspension', 'motif_sanction'),
         }),
     )
 
@@ -32,3 +35,12 @@ class PrestataireAdmin(admin.ModelAdmin):
 @admin.register(Administrateur)
 class AdministrateurAdmin(admin.ModelAdmin):
     list_display = ('utilisateur', 'niveau_acces')
+
+
+from .models import Litige  # Ajoutez Litige à vos imports existants
+
+@admin.register(Litige)
+class LitigeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'utilisateur', 'statut', 'type_sanction', 'date_creation')
+    list_filter = ('statut', 'type_sanction')
+    search_fields = ('utilisateur__username', 'motif')
