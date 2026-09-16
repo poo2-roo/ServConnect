@@ -8,6 +8,17 @@ from .models import Localisation
 from .serializers import LocalisationSerializer
 
 
+class EstProprietaireLocalisationOuLectureSeule(permissions.BasePermission):
+    """Seul le prestataire propriétaire de la structure peut la modifier ou la supprimer."""
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return (
+            hasattr(request.user, 'profil_prestataire')
+            and obj.prestataire == request.user.profil_prestataire
+        )
+
 class LocalisationListCreateView(generics.ListCreateAPIView):
     """
     GET  /api/geolocation/localisations/ — liste publique
@@ -28,7 +39,7 @@ class LocalisationListCreateView(generics.ListCreateAPIView):
 class LocalisationDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Localisation.objects.all()
     serializer_class = LocalisationSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, EstProprietaireLocalisationOuLectureSeule]
 
 
 class LocalisationProximiteView(generics.ListAPIView):
