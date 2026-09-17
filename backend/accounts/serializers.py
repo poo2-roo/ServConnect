@@ -21,7 +21,7 @@ class ConnexionSerializer(TokenObtainPairSerializer):
         identifier = attrs.pop('identifier')
         password = attrs.get('password')
 
-        # Recherche de l'utilisateur par email ou téléphone
+        # 1. Recherche de l'utilisateur par email ou téléphone
         utilisateur = Utilisateur.objects.filter(email__iexact=identifier).first()
         if utilisateur is None:
             utilisateur = Utilisateur.objects.filter(telephone=identifier).first()
@@ -29,11 +29,11 @@ class ConnexionSerializer(TokenObtainPairSerializer):
         if utilisateur is None:
             raise serializers.ValidationError('Email, téléphone ou mot de passe incorrect.')
 
-        # Vérification du mot de passe via hashers (évite le filtrage is_active de authenticate())
+        # 2. Vérification du mot de passe
         if not check_password(password, utilisateur.password):
             raise serializers.ValidationError('Email, téléphone ou mot de passe incorrect.')
 
-        # --- VÉRIFICATION DES SANCTIONS ET RETOUR STRUCTURÉ ---
+        # 3. INTERCEPTION DES SANCTIONS ET RETOUR STRUCTURÉ
         if utilisateur.est_bloque:
             raise serializers.ValidationError({
                 "detail": "Votre compte a été bloqué définitivement.",
@@ -61,10 +61,12 @@ class ConnexionSerializer(TokenObtainPairSerializer):
                 utilisateur.date_fin_suspension = None
                 utilisateur.save(update_fields=['date_fin_suspension'])
 
-        return super().validate({
-            'username': utilisateur.username,
-            'password': password,
-        })
+        # 4. GÉNÉRATION DIRECTE DES TOKENS JWT (Évite super().validate() et le blocage authenticate())
+        refresh = self.get_token(utilisateur)
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
 
 
 class UtilisateurSerializer(serializers.ModelSerializer):
