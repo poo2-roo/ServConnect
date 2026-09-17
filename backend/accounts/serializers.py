@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 from rest_framework import serializers
@@ -21,6 +21,7 @@ class ConnexionSerializer(TokenObtainPairSerializer):
         identifier = attrs.pop('identifier')
         password = attrs.get('password')
 
+        # Recherche de l'utilisateur par email ou téléphone
         utilisateur = Utilisateur.objects.filter(email__iexact=identifier).first()
         if utilisateur is None:
             utilisateur = Utilisateur.objects.filter(telephone=identifier).first()
@@ -28,28 +29,24 @@ class ConnexionSerializer(TokenObtainPairSerializer):
         if utilisateur is None:
             raise serializers.ValidationError('Email, téléphone ou mot de passe incorrect.')
 
-        utilisateur_authentifie = authenticate(
-            request=self.context.get('request'),
-            username=utilisateur.username,
-            password=password,
-        )
-        if utilisateur_authentifie is None:
+        # Vérification du mot de passe via hashers (évite le filtrage is_active de authenticate())
+        if not check_password(password, utilisateur.password):
             raise serializers.ValidationError('Email, téléphone ou mot de passe incorrect.')
 
         # --- VÉRIFICATION DES SANCTIONS ET RETOUR STRUCTURÉ ---
-        if utilisateur_authentifie.est_bloque:
+        if utilisateur.est_bloque:
             raise serializers.ValidationError({
                 "detail": "Votre compte a été bloqué définitivement.",
                 "est_sanctionne": True,
                 "type_sanction": "blocage",
-                "motif": utilisateur_authentifie.motif_sanction or "Non spécifié"
+                "motif": utilisateur.motif_sanction or "Non spécifié"
             })
 
-        if utilisateur_authentifie.date_fin_suspension:
-            if utilisateur_authentifie.date_fin_suspension > timezone.now():
-                temps_restant = utilisateur_authentifie.date_fin_suspension - timezone.now()
+        if utilisateur.date_fin_suspension:
+            if utilisateur.date_fin_suspension > timezone.now():
+                temps_restant = utilisateur.date_fin_suspension - timezone.now()
                 jours_restants = max(1, temps_restant.days)
-                date_str = utilisateur_authentifie.date_fin_suspension.strftime("%d/%m/%Y à %H:%M")
+                date_str = utilisateur.date_fin_suspension.strftime("%d/%m/%Y à %H:%M")
 
                 raise serializers.ValidationError({
                     "detail": f"Votre compte est suspendu jusqu'au {date_str}.",
@@ -57,12 +54,12 @@ class ConnexionSerializer(TokenObtainPairSerializer):
                     "type_sanction": "suspension",
                     "jours_restants": jours_restants,
                     "date_fin": date_str,
-                    "motif": utilisateur_authentifie.motif_sanction or "Non spécifié"
+                    "motif": utilisateur.motif_sanction or "Non spécifié"
                 })
             else:
                 # Suspension expirée : levée automatique
-                utilisateur_authentifie.date_fin_suspension = None
-                utilisateur_authentifie.save(update_fields=['date_fin_suspension'])
+                utilisateur.date_fin_suspension = None
+                utilisateur.save(update_fields=['date_fin_suspension'])
 
         return super().validate({
             'username': utilisateur.username,

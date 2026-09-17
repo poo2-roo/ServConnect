@@ -23,8 +23,28 @@ export default function ConnexionScreen({ onAllerInscription }: { onAllerInscrip
     setChargement(true);
     try {
       await connexion(identifier, password);
-    } catch (erreur) {
-      Alert.alert('Connexion impossible', 'Identifiant ou mot de passe incorrect.');
+    } catch (erreur: any) {
+      // Récupération de la réponse JSON structurée du backend
+      const data = erreur?.response?.data;
+
+      if (data?.est_sanctionne) {
+        if (data.type_sanction === 'blocage') {
+          Alert.alert(
+            'Compte Bloqué',
+            `Votre compte a été bloqué définitivement.\n\nMotif : ${data.motif}`
+          );
+        } else if (data.type_sanction === 'suspension') {
+          Alert.alert(
+            'Compte Suspendu',
+            `Votre compte est suspendu jusqu'au ${data.date_fin}.\n\nMotif : ${data.motif}`
+          );
+        }
+      } else {
+        const message = typeof data?.detail === 'string' 
+          ? data.detail 
+          : 'Email, téléphone ou mot de passe incorrect.';
+        Alert.alert('Connexion impossible', message);
+      }
     } finally {
       setChargement(false);
     }
@@ -37,7 +57,6 @@ export default function ConnexionScreen({ onAllerInscription }: { onAllerInscrip
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
 
-        {/* Photo héro (à remplacer plus tard par une vraie image de prestataire) */}
         <View style={styles.heroConteneur}>
           <Image
             source={{ uri: 'https://images.unsplash.com/photo-1622396636133-ba608305f3ce?w=300&q=80' }}
