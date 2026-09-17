@@ -1,26 +1,24 @@
-from django.db import models
-from rest_framework import generics, permissions
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-
-
-
-
 from datetime import timedelta
+from django.db import models
 from django.utils import timezone
+from rest_framework import generics, permissions
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ai_services.gemini_client import ErreurAppelIA
+from ai_services.kyc import verifier_identite
 
-
-from .models import Litige, Utilisateur
+from .models import Client, Litige, Prestataire, Utilisateur
 from .permissions import EstAdministrateur
-from .serializers import AdminUtilisateurDetailSerializer, LitigeSerializer
-from .models import Client, Prestataire, Utilisateur
 from .serializers import (
+    AdminUtilisateurDetailSerializer,
     ClientLocalisationSerializer,
     ClientSerializer,
     DevenirPrestataireSerializer,
     InscriptionSerializer,
+    LitigeSerializer,
+    PrestataireKYCUploadSerializer,
     PrestataireSerializer,
     UtilisateurSerializer,
 )
@@ -28,7 +26,6 @@ from .serializers import (
 
 class InscriptionView(generics.CreateAPIView):
     """POST /api/accounts/inscription/ — création de compte (client ou prestataire)."""
-
     queryset = Utilisateur.objects.all()
     serializer_class = InscriptionSerializer
     permission_classes = [permissions.AllowAny]
@@ -36,7 +33,6 @@ class InscriptionView(generics.CreateAPIView):
 
 class ProfilView(generics.RetrieveUpdateAPIView):
     """GET/PUT/PATCH /api/accounts/moi/ — consulter ou modifier son propre profil."""
-
     serializer_class = UtilisateurSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -46,7 +42,6 @@ class ProfilView(generics.RetrieveUpdateAPIView):
 
 class ClientDetailView(generics.RetrieveAPIView):
     """GET /api/accounts/clients/<id>/ — profil public d'un client."""
-
     queryset = Client.objects.select_related('utilisateur')
     serializer_class = ClientSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -54,7 +49,6 @@ class ClientDetailView(generics.RetrieveAPIView):
 
 class PrestataireListView(generics.ListAPIView):
     """GET /api/accounts/prestataires/ — liste des prestataires (annuaire public)."""
-
     queryset = Prestataire.objects.select_related('utilisateur').filter(est_disponible=True)
     serializer_class = PrestataireSerializer
     permission_classes = [permissions.AllowAny]
@@ -62,22 +56,13 @@ class PrestataireListView(generics.ListAPIView):
 
 class PrestataireDetailView(generics.RetrieveAPIView):
     """GET /api/accounts/prestataires/<id>/ — fiche détaillée d'un prestataire."""
-
     queryset = Prestataire.objects.select_related('utilisateur')
     serializer_class = PrestataireSerializer
     permission_classes = [permissions.AllowAny]
 
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
-from ai_services.gemini_client import ErreurAppelIA
-from ai_services.kyc import verifier_identite
-from .serializers import PrestataireKYCUploadSerializer
-
 
 class PrestataireKYCUploadView(generics.UpdateAPIView):
     """PATCH /api/accounts/moi/kyc/ — téléverser sa pièce d'identité."""
-
     serializer_class = PrestataireKYCUploadSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -93,7 +78,6 @@ class PrestataireKYCUploadView(generics.UpdateAPIView):
 
 class PrestataireKYCVerifierView(APIView):
     """POST /api/accounts/moi/kyc/verifier/ — lance l'analyse IA de la pièce déjà téléversée."""
-
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -114,31 +98,27 @@ class PrestataireKYCVerifierView(APIView):
             'signes_suspects': resultat.get('signes_suspects', []),
         })
 
+
 class DevenirPrestataireView(APIView):
     """POST /api/accounts/moi/devenir-prestataire/ — active un profil Prestataire."""
-
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         if hasattr(request.user, 'profil_prestataire'):
-            return Response(
-                {"detail": "Vous avez déjà un profil prestataire."}, status=400
-            )
+            return Response({"detail": "Vous avez déjà un profil prestataire."}, status=400)
 
-        from .serializers import DevenirPrestataireSerializer
         serializer = DevenirPrestataireSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         prestataire = serializer.save(utilisateur=request.user)
-
         request.user.role = Utilisateur.Role.PRESTATAIRE
         request.user.save(update_fields=['role'])
 
         return Response(PrestataireSerializer(prestataire).data, status=201)
 
+
 class BasculerModeView(APIView):
     """POST /api/accounts/moi/basculer-mode/ — change le rôle affiché (client <-> prestataire)."""
-
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -146,9 +126,7 @@ class BasculerModeView(APIView):
         nouveau_mode = request.data.get('mode')
 
         if nouveau_mode not in (Utilisateur.Role.CLIENT, Utilisateur.Role.PRESTATAIRE):
-            return Response(
-                {"detail": "Le champ 'mode' doit être 'client' ou 'prestataire'."}, status=400
-            )
+            return Response({"detail": "Le champ 'mode' doit être 'client' ou 'prestataire'."}, status=400)
 
         if nouveau_mode == Utilisateur.Role.PRESTATAIRE and not hasattr(user, 'profil_prestataire'):
             return Response(
@@ -161,12 +139,9 @@ class BasculerModeView(APIView):
 
         return Response(UtilisateurSerializer(user).data)
 
-from .permissions import EstAdministrateur
-
 
 class AdminPrestatairesEnAttenteView(generics.ListAPIView):
     """GET /api/accounts/admin/prestataires-en-attente/ — file d'attente KYC."""
-
     serializer_class = PrestataireSerializer
     permission_classes = [EstAdministrateur]
 
@@ -178,7 +153,6 @@ class AdminPrestatairesEnAttenteView(generics.ListAPIView):
 
 class AdminValiderKYCView(APIView):
     """POST /api/accounts/admin/prestataires/<id>/valider-kyc/ — décision manuelle."""
-
     permission_classes = [EstAdministrateur]
 
     def post(self, request, pk):
@@ -189,9 +163,7 @@ class AdminValiderKYCView(APIView):
 
         decision = request.data.get('decision')
         if decision not in (Prestataire.StatutKYC.VERIFIE, Prestataire.StatutKYC.REJETE):
-            return Response(
-                {"detail": "Le champ 'decision' doit être 'verifie' ou 'rejete'."}, status=400
-            )
+            return Response({"detail": "Le champ 'decision' doit être 'verifie' ou 'rejete'."}, status=400)
 
         prestataire.statut_kyc = decision
         prestataire.kyc_commentaire = request.data.get('commentaire', '')
@@ -202,7 +174,6 @@ class AdminValiderKYCView(APIView):
 
 class AdminBasculerActivationCompteView(APIView):
     """POST /api/accounts/admin/utilisateurs/<id>/basculer-activation/ — bannir/réactiver."""
-
     permission_classes = [EstAdministrateur]
 
     def post(self, request, pk):
@@ -212,18 +183,16 @@ class AdminBasculerActivationCompteView(APIView):
             return Response({"detail": "Utilisateur introuvable."}, status=404)
 
         if hasattr(utilisateur, 'profil_administrateur'):
-            return Response(
-                {"detail": "Impossible de désactiver un compte administrateur."}, status=400
-            )
+            return Response({"detail": "Impossible de désactiver un compte administrateur."}, status=400)
 
         utilisateur.is_active = not utilisateur.is_active
         utilisateur.save(update_fields=['is_active'])
 
         return Response({"id": utilisateur.id, "is_active": utilisateur.is_active})
 
+
 class PrestataireCategoriesUpdateView(APIView):
     """PATCH /api/accounts/moi/categories/ — modifier les catégories de son profil prestataire."""
-
     permission_classes = [permissions.IsAuthenticated]
 
     def patch(self, request):
@@ -236,9 +205,9 @@ class PrestataireCategoriesUpdateView(APIView):
 
         return Response(PrestataireSerializer(prestataire).data)
 
+
 class MonProfilPrestataireView(generics.RetrieveAPIView):
     """GET /api/accounts/moi/prestataire/ — mon propre profil prestataire complet."""
-
     serializer_class = PrestataireSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -248,9 +217,9 @@ class MonProfilPrestataireView(generics.RetrieveAPIView):
             raise PermissionDenied("Vous n'avez pas de profil prestataire.")
         return prestataire
 
+
 class MonProfilPrestataireUpdateView(generics.UpdateAPIView):
     """PATCH /api/accounts/moi/prestataire/modifier/ — modifier nom_entreprise/description/experience."""
-
     serializer_class = DevenirPrestataireSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -262,8 +231,7 @@ class MonProfilPrestataireUpdateView(generics.UpdateAPIView):
 
 
 class ClientLocalisationUpdateView(generics.UpdateAPIView):
-    """PATCH /api/accounts/moi/localisation/ — modifier la position par defaut du client."""
-
+    """PATCH /api/accounts/moi/localisation/ — modifier la position par défaut du client."""
     serializer_class = ClientLocalisationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -271,9 +239,7 @@ class ClientLocalisationUpdateView(generics.UpdateAPIView):
         client = getattr(self.request.user, 'profil_client', None)
         if client is None:
             raise PermissionDenied("Vous n'avez pas de profil client.")
-        return client    
-
-
+        return client
 
 
 class AdminUtilisateursListView(generics.ListAPIView):
@@ -314,22 +280,28 @@ class AdminSanctionnerUtilisateurView(APIView):
         except Utilisateur.DoesNotExist:
             return Response({"detail": "Utilisateur introuvable."}, status=404)
 
-        type_sanction = request.data.get('type_sanction') # 'suspension' ou 'blocage'
-        motif = request.data.get('motif', '')
-        duree_jours = request.data.get('duree_jours', 7)
+        if hasattr(utilisateur, 'profil_administrateur'):
+            return Response({"detail": "Impossible de sanctionner un compte administrateur."}, status=400)
 
-        if type_sanction == 'blocage':
+        type_sanction = request.data.get('type_sanction')
+        duree_jours = request.data.get('duree_jours')
+        motif = request.data.get('motif', '')
+
+        if type_sanction == 'suspension':
+            if not duree_jours:
+                return Response({"detail": "duree_jours est obligatoire pour une suspension."}, status=400)
+            utilisateur.date_fin_suspension = timezone.now() + timedelta(days=int(duree_jours))
+            utilisateur.est_bloque = False
+        elif type_sanction == 'blocage':
             utilisateur.est_bloque = True
             utilisateur.date_fin_suspension = None
-        elif type_sanction == 'suspension':
-            utilisateur.est_bloque = False
-            utilisateur.date_fin_suspension = timezone.now() + timedelta(days=int(duree_jours))
         else:
-            return Response({"detail": "Type de sanction invalide."}, status=400)
+            return Response({"detail": "type_sanction doit être 'suspension' ou 'blocage'."}, status=400)
 
         utilisateur.motif_sanction = motif
-        utilisateur.save()
-        return Response(AdminUtilisateurDetailSerializer(utilisateur).data)
+        utilisateur.save(update_fields=['est_bloque', 'date_fin_suspension', 'motif_sanction'])
+
+        return Response({"id": utilisateur.id, "est_bloque": utilisateur.est_bloque, "date_fin_suspension": utilisateur.date_fin_suspension})
 
 
 class AdminLeverSanctionView(APIView):
@@ -345,7 +317,8 @@ class AdminLeverSanctionView(APIView):
         utilisateur.est_bloque = False
         utilisateur.date_fin_suspension = None
         utilisateur.motif_sanction = ''
-        utilisateur.save()
+        utilisateur.save(update_fields=['est_bloque', 'date_fin_suspension', 'motif_sanction'])
+
         return Response(AdminUtilisateurDetailSerializer(utilisateur).data)
 
 
@@ -355,12 +328,14 @@ class LitigeListCreateView(generics.ListCreateAPIView):
     serializer_class = LitigeSerializer
 
     def get_queryset(self):
-        if getattr(self.request.user, 'role', None) == Utilisateur.Role.ADMINISTRATEUR:
-            statut = self.request.query_params.get('statut')
-            if statut:
-                return Litige.objects.filter(statut=statut)
-            return Litige.objects.all()
-        return Litige.objects.filter(signale_par=self.request.user)
+        queryset = Litige.objects.select_related('utilisateur', 'signale_par')
+        if getattr(self.request.user, 'role', None) != Utilisateur.Role.ADMINISTRATEUR:
+            queryset = queryset.filter(signale_par=self.request.user)
+
+        statut = self.request.query_params.get('statut')
+        if statut:
+            queryset = queryset.filter(statut=statut)
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(signale_par=self.request.user)
@@ -372,7 +347,7 @@ class AdminResoudreLitigeView(APIView):
 
     def post(self, request, pk):
         try:
-            litige = Litige.objects.get(pk=pk)
+            litige = Litige.objects.select_related('utilisateur').get(pk=pk)
         except Litige.DoesNotExist:
             return Response({"detail": "Litige introuvable."}, status=404)
 
@@ -380,16 +355,22 @@ class AdminResoudreLitigeView(APIView):
         duree_jours = request.data.get('duree_jours')
         commentaire = request.data.get('commentaire_resolution', '')
 
-        utilisateur = litige.utilisateur
+        utilisateur_cible = litige.utilisateur
+        if hasattr(utilisateur_cible, 'profil_administrateur'):
+            return Response({"detail": "Impossible de sanctionner un compte administrateur."}, status=400)
 
-        if type_sanction == Litige.TypeSanction.BLOCAGE:
-            utilisateur.est_bloque = True
-            utilisateur.motif_sanction = litige.motif
-            utilisateur.save()
-        elif type_sanction == Litige.TypeSanction.SUSPENSION and duree_jours:
-            utilisateur.date_fin_suspension = timezone.now() + timedelta(days=int(duree_jours))
-            utilisateur.motif_sanction = litige.motif
-            utilisateur.save()
+        if type_sanction == Litige.TypeSanction.SUSPENSION:
+            if not duree_jours:
+                return Response({"detail": "duree_jours est obligatoire pour une suspension."}, status=400)
+            utilisateur_cible.date_fin_suspension = timezone.now() + timedelta(days=int(duree_jours))
+            utilisateur_cible.est_bloque = False
+            utilisateur_cible.motif_sanction = litige.motif
+            utilisateur_cible.save(update_fields=['date_fin_suspension', 'est_bloque', 'motif_sanction'])
+        elif type_sanction == Litige.TypeSanction.BLOCAGE:
+            utilisateur_cible.est_bloque = True
+            utilisateur_cible.date_fin_suspension = None
+            utilisateur_cible.motif_sanction = litige.motif
+            utilisateur_cible.save(update_fields=['est_bloque', 'date_fin_suspension', 'motif_sanction'])
 
         litige.statut = Litige.Statut.RESOLU
         litige.type_sanction = type_sanction
