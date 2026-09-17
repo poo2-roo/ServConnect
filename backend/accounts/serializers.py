@@ -17,57 +17,45 @@ class ConnexionSerializer(TokenObtainPairSerializer):
         super().__init__(*args, **kwargs)
         self.fields.pop('username', None)
 
-    def validate(self, attrs):
+def validate(self, attrs):
         identifier = attrs.pop('identifier')
         password = attrs.get('password')
 
-        # 1. Recherche de l'utilisateur par email ou téléphone
         utilisateur = Utilisateur.objects.filter(email__iexact=identifier).first()
         if utilisateur is None:
             utilisateur = Utilisateur.objects.filter(telephone=identifier).first()
 
-        if utilisateur is None:
-            raise serializers.ValidationError('Email, téléphone ou mot de passe incorrect.')
+        if utilisateur is None or not check_password(password, utilisateur.password):
+            raise serializers.ValidationError({'detail': 'Email, téléphone ou mot de passe incorrect.'})
 
-        # 2. Vérification du mot de passe
-        if not check_password(password, utilisateur.password):
-            raise serializers.ValidationError('Email, téléphone ou mot de passe incorrect.')
-
-        # 3. INTERCEPTION DES SANCTIONS ET RETOUR STRUCTURÉ
+        # --- SANCTIONS : Dictionnaire simple sans tableaux DRF ---
         if utilisateur.est_bloque:
             raise serializers.ValidationError({
-                "detail": "Votre compte a été bloqué définitivement.",
-                "est_sanctionne": True,
-                "type_sanction": "blocage",
-                "motif": utilisateur.motif_sanction or "Non spécifié"
+                'detail': 'Votre compte a été bloqué définitivement.',
+                'est_sanctionne': 'true',
+                'type_sanction': 'blocage',
+                'motif': utilisateur.motif_sanction or 'Non spécifié'
             })
 
         if utilisateur.date_fin_suspension:
             if utilisateur.date_fin_suspension > timezone.now():
-                temps_restant = utilisateur.date_fin_suspension - timezone.now()
-                jours_restants = max(1, temps_restant.days)
                 date_str = utilisateur.date_fin_suspension.strftime("%d/%m/%Y à %H:%M")
-
                 raise serializers.ValidationError({
-                    "detail": f"Votre compte est suspendu jusqu'au {date_str}.",
-                    "est_sanctionne": True,
-                    "type_sanction": "suspension",
-                    "jours_restants": jours_restants,
-                    "date_fin": date_str,
-                    "motif": utilisateur.motif_sanction or "Non spécifié"
+                    'detail': f"Votre compte est suspendu jusqu'au {date_str}.",
+                    'est_sanctionne': 'true',
+                    'type_sanction': 'suspension',
+                    'date_fin': date_str,
+                    'motif': utilisateur.motif_sanction or 'Non spécifié'
                 })
             else:
-                # Suspension expirée : levée automatique
                 utilisateur.date_fin_suspension = None
                 utilisateur.save(update_fields=['date_fin_suspension'])
 
-        # 4. GÉNÉRATION DIRECTE DES TOKENS JWT (Évite super().validate() et le blocage authenticate())
         refresh = self.get_token(utilisateur)
         return {
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
-
 
 class UtilisateurSerializer(serializers.ModelSerializer):
     """Représentation en lecture d'un utilisateur (pour l'API)."""

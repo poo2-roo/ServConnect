@@ -15,7 +15,15 @@ export default function ConnexionScreen({ onAllerInscription }: { onAllerInscrip
   const [password, setPassword] = useState('');
   const [chargement, setChargement] = useState(false);
 
-  async function handleConnexion() {
+  // Fonction helper pour extraire la valeur même si DRF la renvoie dans un tableau
+  const extraireValeur = (valeur: any): string => {
+    if (Array.isArray(valeur)) {
+      return valeur[0] ? String(valeur[0]) : '';
+    }
+    return valeur ? String(valeur) : '';
+  };
+
+async function handleConnexion() {
     if (!identifier || !password) {
       Alert.alert('Champs manquants', 'Merci de remplir votre email ou votre téléphone, ainsi que votre mot de passe.');
       return;
@@ -23,29 +31,39 @@ export default function ConnexionScreen({ onAllerInscription }: { onAllerInscrip
     setChargement(true);
     try {
       await connexion(identifier, password);
-    } catch (erreur: any) {
-      // Récupération de la réponse JSON structurée du backend
-      const data = erreur?.response?.data;
+} catch (erreur: any) {
+      // Axios place la réponse JSON dans erreur.response.data
+      const data = erreur?.response?.data || erreur?.data || {};
 
-      if (data?.est_sanctionne) {
-        if (data.type_sanction === 'blocage') {
+      // Extraction robuste (gère chaîne directe ou premier élément de tableau)
+      const getVal = (field: any) => {
+        if (Array.isArray(field)) return String(field[0] || '');
+        return field ? String(field) : '';
+      };
+
+      const estSanctionne = getVal(data.est_sanctionne);
+      const typeSanction = getVal(data.type_sanction);
+      const dateFin = getVal(data.date_fin);
+      const motif = getVal(data.motif);
+      const detailMsg = getVal(data.detail);
+
+      if (estSanctionne === 'true' || estSanctionne === 'True') {
+        if (typeSanction === 'blocage') {
           Alert.alert(
             'Compte Bloqué',
-            `Votre compte a été bloqué définitivement.\n\nMotif : ${data.motif}`
+            `Votre compte a été bloqué définitivement.\n\nMotif : ${motif || 'Non spécifié'}`
           );
-        } else if (data.type_sanction === 'suspension') {
+        } else {
           Alert.alert(
             'Compte Suspendu',
-            `Votre compte est suspendu jusqu'au ${data.date_fin}.\n\nMotif : ${data.motif}`
+            `Votre compte est suspendu jusqu'au ${dateFin}.\n\nMotif : ${motif || 'Non spécifié'}`
           );
         }
-      } else {
-        const message = typeof data?.detail === 'string' 
-          ? data.detail 
-          : 'Email, téléphone ou mot de passe incorrect.';
-        Alert.alert('Connexion impossible', message);
+        return;
       }
-    } finally {
+
+      Alert.alert('Connexion impossible', detailMsg || 'Email, téléphone ou mot de passe incorrect.');
+    }finally {
       setChargement(false);
     }
   }
