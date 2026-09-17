@@ -41,14 +41,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function connexion(identifier: string, password: string) {
-    const reponse = await api.post<TokensAuth>('/api/accounts/connexion/', { identifier, password });
-    await SecureStore.setItemAsync('access_token', reponse.data.access);
-    await SecureStore.setItemAsync('refresh_token', reponse.data.refresh);
+    try {
+      const reponse = await api.post<TokensAuth>('/api/accounts/connexion/', { identifier, password });
+      await SecureStore.setItemAsync('access_token', reponse.data.access);
+      await SecureStore.setItemAsync('refresh_token', reponse.data.refresh);
 
-    const profil = await api.get<Utilisateur>('/api/accounts/moi/');
-    setUtilisateur(profil.data);
+      const profil = await api.get<Utilisateur>('/api/accounts/moi/');
+      setUtilisateur(profil.data);
+    } catch (erreur: any) {
+      const donnees = erreur?.response?.data;
+      const messageErreur =
+        donnees?.non_field_errors?.[0] || donnees?.detail ||
+        (typeof donnees === 'string' ? donnees : null);
+      const err: any = new Error(messageErreur || 'Connexion impossible.');
+      err.messageServeur = messageErreur;
+      throw err;
+    }
   }
-
   async function deconnexion() {
     await SecureStore.deleteItemAsync('access_token');
     await SecureStore.deleteItemAsync('refresh_token');

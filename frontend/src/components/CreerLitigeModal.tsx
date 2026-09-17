@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import api from '../services/api';
+import { creerLitige } from '../services/admin';
+import { couleurs } from '../theme/colors';
+import { rayons, espacements, stylesPartages } from '../theme/styles';
 
 interface CreerLitigeModalProps {
   visible: boolean;
@@ -37,23 +39,35 @@ export const CreerLitigeModal: React.FC<CreerLitigeModalProps> = ({
 
     setLoading(true);
     try {
-      await api.post('/accounts/litiges/', {
-        utilisateur: utilisateurCibleId,
+      await creerLitige({
+        utilisateurCibleId,
         motif: motif.trim(),
       });
 
       Alert.alert(
         'Signalement envoyé',
-        'Votre litige a été transmis à notre équipe de modération. Nous traiterons votre demande dans les plus brefs délais.'
+        'Votre litige a été transmis à notre équipe de modération.'
       );
       setMotif('');
       if (onSuccess) onSuccess();
       onClose();
     } catch (error: any) {
-      const messageErreur =
-        error.response?.data?.detail ||
-        'Impossible d’enregistrer le litige pour le moment.';
-      Alert.alert('Erreur', messageErreur);
+      console.log('Erreur litige response backend:', error?.response?.data);
+
+      const dataErreur = error?.response?.data;
+      let messageErreur = 'Impossible d’enregistrer le litige pour le moment.';
+
+      if (dataErreur) {
+        if (typeof dataErreur === 'string') {
+          messageErreur = dataErreur;
+        } else if (typeof dataErreur === 'object') {
+          messageErreur = Object.entries(dataErreur)
+            .map(([cle, val]) => `${cle}: ${Array.isArray(val) ? val.join(', ') : val}`)
+            .join('\n');
+        }
+      }
+
+      Alert.alert('Erreur de signalement', messageErreur);
     } finally {
       setLoading(false);
     }
@@ -69,7 +83,7 @@ export const CreerLitigeModal: React.FC<CreerLitigeModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           <Text style={styles.title}>Signaler un problème</Text>
-          
+
           {utilisateurCibleNom && (
             <Text style={styles.subTitle}>
               Utilisateur concerné : <Text style={styles.targetName}>{utilisateurCibleNom}</Text>
@@ -91,22 +105,22 @@ export const CreerLitigeModal: React.FC<CreerLitigeModalProps> = ({
 
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
+              style={[stylesPartages.boutonContour, { flex: 0.48 }]}
               onPress={onClose}
               disabled={loading}
             >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
+              <Text style={stylesPartages.boutonContourTexte}>Annuler</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.button, styles.submitButton]}
+              style={[stylesPartages.boutonPrincipal, { flex: 0.48, backgroundColor: '#DC3545' }]}
               onPress={SoumettreSignalement}
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#FFF" size="small" />
+                <ActivityIndicator color={couleurs.blanc} size="small" />
               ) : (
-                <Text style={styles.submitButtonText}>Envoyer</Text>
+                <Text style={stylesPartages.boutonPrincipalTexte}>Envoyer</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -121,73 +135,47 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
-    padding: 20,
+    padding: espacements.md,
   },
   modalContainer: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 20,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    backgroundColor: couleurs.blanc,
+    borderRadius: rayons.moyen,
+    padding: espacements.md,
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    color: couleurs.tertiaire,
+    marginBottom: espacements.xs,
   },
   subTitle: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
+    color: couleurs.neutre,
+    marginBottom: espacements.sm,
   },
   targetName: {
     fontWeight: '600',
-    color: '#111',
+    color: couleurs.tertiaire,
   },
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#444',
+    color: couleurs.tertiaire,
     marginBottom: 8,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: couleurs.bordure,
+    borderRadius: rayons.moyen,
+    padding: espacements.sm,
     fontSize: 14,
-    color: '#333',
-    backgroundColor: '#F9F9F9',
+    color: couleurs.tertiaire,
+    backgroundColor: couleurs.fond,
     height: 120,
-    marginBottom: 20,
+    marginBottom: espacements.md,
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  button: {
-    flex: 0.48,
-    height: 44,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#E0E0E0',
-  },
-  cancelButtonText: {
-    color: '#333',
-    fontWeight: '600',
-  },
-  submitButton: {
-    backgroundColor: '#DC3545',
-  },
-  submitButtonText: {
-    color: '#FFF',
-    fontWeight: '600',
   },
 });

@@ -218,7 +218,9 @@ export default function ProfilScreen({ navigation }: any) {
           <Text style={stylesPartages.boutonPrincipalTexte}>Devenir prestataire</Text>
         </TouchableOpacity>
       )}
-
+      <TouchableOpacity style={styles.boutonDeconnexion} onPress={deconnexion}>
+        <Text style={styles.boutonDeconnexionTexte}>Se déconnecter</Text>
+      </TouchableOpacity>
       {afficherFormPrestataire && (
         <View style={styles.formEdition}>
           <Text style={styles.titreSection}>Créer mon profil prestataire</Text>
@@ -261,9 +263,7 @@ export default function ProfilScreen({ navigation }: any) {
         <Text style={stylesPartages.boutonContourTexte}>Gérer mes services</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.boutonDeconnexion} onPress={deconnexion}>
-        <Text style={styles.boutonDeconnexionTexte}>Se déconnecter</Text>
-      </TouchableOpacity>
+
             <Text style={styles.titreSection}>Mon activité</Text>
             {enEditionPrestataire ? (
               <View key="edition-activite">

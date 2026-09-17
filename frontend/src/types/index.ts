@@ -108,9 +108,9 @@ export interface Litige {
   signale_par_nom: string | null;
   motif: string;
   statut: 'ouvert' | 'resolu';
-  type_sanction: 'aucune' | 'suspension' | 'blocage';
-  duree_jours?: number | null;
-  commentaire_resolution?: string;
+  type_sanction: string;
+  duree_jours: number | null;
+  commentaire_resolution: string;
   date_creation: string;
-  date_resolution?: string;
+  date_resolution: string | null;
 }
