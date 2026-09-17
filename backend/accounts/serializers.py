@@ -1,15 +1,15 @@
-from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import authenticate
-from services.models import Categorie
+from django.contrib.auth.password_validation import validate_password
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.utils import timezone
 
-from .models import Administrateur, Client, Prestataire, Utilisateur
+from services.models import Categorie
+from .models import Administrateur, Client, Litige, Prestataire, Utilisateur
 
 
 class ConnexionSerializer(TokenObtainPairSerializer):
-    """Authentifie un utilisateur avec son email ou son numéro de téléphone et vérifie les sanctions."""
+    """Authentifie un utilisateur avec son email ou téléphone et renvoie les détails de sanction s'il est suspendu/bloqué."""
 
     identifier = serializers.CharField(write_only=True)
 
@@ -20,6 +20,7 @@ class ConnexionSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         identifier = attrs.pop('identifier')
         password = attrs.get('password')
+
         utilisateur = Utilisateur.objects.filter(email__iexact=identifier).first()
         if utilisateur is None:
             utilisateur = Utilisateur.objects.filter(telephone=identifier).first()
@@ -35,18 +36,29 @@ class ConnexionSerializer(TokenObtainPairSerializer):
         if utilisateur_authentifie is None:
             raise serializers.ValidationError('Email, téléphone ou mot de passe incorrect.')
 
-        # --- VÉRIFICATION DES SANCTIONS ---
+        # --- VÉRIFICATION DES SANCTIONS ET RETOUR STRUCTURÉ ---
         if utilisateur_authentifie.est_bloque:
-            raise serializers.ValidationError(
-                f"Votre compte a été bloqué définitivement. Motif : {utilisateur_authentifie.motif_sanction or 'Non spécifié'}"
-            )
+            raise serializers.ValidationError({
+                "detail": "Votre compte a été bloqué définitivement.",
+                "est_sanctionne": True,
+                "type_sanction": "blocage",
+                "motif": utilisateur_authentifie.motif_sanction or "Non spécifié"
+            })
 
         if utilisateur_authentifie.date_fin_suspension:
             if utilisateur_authentifie.date_fin_suspension > timezone.now():
+                temps_restant = utilisateur_authentifie.date_fin_suspension - timezone.now()
+                jours_restants = max(1, temps_restant.days)
                 date_str = utilisateur_authentifie.date_fin_suspension.strftime("%d/%m/%Y à %H:%M")
-                raise serializers.ValidationError(
-                    f"Votre compte est suspendu jusqu'au {date_str}. Motif : {utilisateur_authentifie.motif_sanction or 'Non spécifié'}"
-                )
+
+                raise serializers.ValidationError({
+                    "detail": f"Votre compte est suspendu jusqu'au {date_str}.",
+                    "est_sanctionne": True,
+                    "type_sanction": "suspension",
+                    "jours_restants": jours_restants,
+                    "date_fin": date_str,
+                    "motif": utilisateur_authentifie.motif_sanction or "Non spécifié"
+                })
             else:
                 # Suspension expirée : levée automatique
                 utilisateur_authentifie.date_fin_suspension = None
@@ -57,7 +69,7 @@ class ConnexionSerializer(TokenObtainPairSerializer):
             'password': password,
         })
 
-    
+
 class UtilisateurSerializer(serializers.ModelSerializer):
     """Représentation en lecture d'un utilisateur (pour l'API)."""
 
@@ -76,13 +88,9 @@ class UtilisateurSerializer(serializers.ModelSerializer):
     def get_a_profil_prestataire(self, obj):
         return hasattr(obj, 'profil_prestataire')
 
+
 class InscriptionSerializer(serializers.ModelSerializer):
-    """
-    Création d'un compte. Le mot de passe est en write_only (jamais renvoyé
-    dans les réponses API). Selon le `role` choisi, on crée automatiquement
-    le profil Client ou Prestataire associé. La position (latitude/longitude)
-    capturée à l'inscription est enregistrée sur le profil Client.
-    """
+    """Inscription publique (Client ou Prestataire)."""
 
     password = serializers.CharField(write_only=True, validators=[validate_password])
     ville = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -152,16 +160,12 @@ class PrestataireSerializer(serializers.ModelSerializer):
 
 
 class PrestataireKYCUploadSerializer(serializers.ModelSerializer):
-    """Permet au prestataire de téléverser sa pièce d'identité et son selfie."""
-
     class Meta:
         model = Prestataire
         fields = ['piece_identite_recto', 'piece_identite_verso', 'selfie_avec_piece']
 
 
 class DevenirPrestataireSerializer(serializers.ModelSerializer):
-    """Utilisé pour activer un profil Prestataire sur un compte existant."""
-
     categories = serializers.PrimaryKeyRelatedField(
         queryset=Categorie.objects.all(), many=True, required=False
     )
@@ -176,8 +180,6 @@ class ClientLocalisationSerializer(serializers.ModelSerializer):
         model = Client
         fields = ['latitude', 'longitude', 'adresse_habituelle']
 
-
-from .models import Litige
 
 class LitigeSerializer(serializers.ModelSerializer):
     utilisateur_nom = serializers.CharField(source='utilisateur.username', read_only=True)
