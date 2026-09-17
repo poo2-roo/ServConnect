@@ -69,3 +69,25 @@ class ConversationSerializer(serializers.ModelSerializer):
         if request is None or not request.user.is_authenticated:
             return 0
         return obj.messages.filter(est_lu=False).exclude(expediteur=request.user).count()
+
+from .models import ConversationAdmin, MessageAdmin
+
+
+class MessageAdminSerializer(serializers.ModelSerializer):
+    expediteur_nom = serializers.CharField(source='expediteur.username', read_only=True)
+    expediteur_role = serializers.CharField(source='expediteur.role', read_only=True)
+
+    class Meta:
+        model = MessageAdmin
+        fields = ['id', 'conversation', 'expediteur', 'expediteur_nom', 'expediteur_role', 'contenu', 'date_envoi']
+        read_only_fields = ['conversation', 'expediteur', 'date_envoi']
+
+
+class ConversationAdminSerializer(serializers.ModelSerializer):
+    utilisateur_nom = serializers.CharField(source='utilisateur.username', read_only=True)
+    utilisateur_role = serializers.CharField(source='utilisateur.role', read_only=True)
+
+    class Meta:
+        model = ConversationAdmin
+        fields = ['id', 'administrateur', 'utilisateur', 'utilisateur_nom', 'utilisateur_role', 'derniere_activite']
+        read_only_fields = ['administrateur', 'derniere_activite']    

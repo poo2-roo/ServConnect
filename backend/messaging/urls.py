@@ -1,6 +1,8 @@
 from django.urls import path
 
 from .views import (
+    AdminConversationListCreateView,
+    AdminMessageListCreateView,    
     ConversationDetailView,
     ConversationListCreateView,
     ConversationSuggestionsView,
@@ -8,6 +10,8 @@ from .views import (
 )
 
 urlpatterns = [
+    path('admin-conversations/', AdminConversationListCreateView.as_view(), name='admin-conversation-list-create'),
+    path('admin-conversations/<int:conversation_id>/messages/', AdminMessageListCreateView.as_view(), name='admin-message-list-create'),    
     path('conversations/', ConversationListCreateView.as_view(), name='conversation-list-create'),
     path('conversations/<int:pk>/', ConversationDetailView.as_view(), name='conversation-detail'),
     path(
