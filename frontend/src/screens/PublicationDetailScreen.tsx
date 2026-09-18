@@ -44,7 +44,7 @@ export default function PublicationDetailScreen({ route, navigation }: any) {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
+    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
       <View style={styles.entete}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: espacements.sm }}>
           <Ionicons name="arrow-back" size={24} color={couleurs.tertiaire} />
@@ -53,6 +53,7 @@ export default function PublicationDetailScreen({ route, navigation }: any) {
       </View>
 
       <FlatList
+        style={{ flex: 1 }}
         data={commentaires}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={

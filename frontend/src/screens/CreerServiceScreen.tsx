@@ -61,7 +61,7 @@ export default function CreerServiceScreen({ navigation }: any) {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={{ padding: espacements.md, paddingTop: espacements.xl }}>
         <View style={styles.entete}>
           <TouchableOpacity onPress={() => navigation.goBack()}>

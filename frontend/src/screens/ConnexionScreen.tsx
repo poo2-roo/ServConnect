@@ -62,8 +62,9 @@ async function handleConnexion() {
         return;
       }
 
-      Alert.alert('Connexion impossible', detailMsg || 'Email, téléphone ou mot de passe incorrect.');
-    }finally {
+      const messageAffiche = detailMsg || erreur?.messageServeur || erreur?.message || 'Email, téléphone ou mot de passe incorrect.';
+      Alert.alert('Connexion impossible', messageAffiche);
+    } finally {
       setChargement(false);
     }
   }
@@ -71,7 +72,7 @@ async function handleConnexion() {
   return (
     <KeyboardAvoidingView
       style={styles.conteneur}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
 

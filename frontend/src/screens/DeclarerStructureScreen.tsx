@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import LocalisationScreen from './LocalisationScreen';
 import { creerLocalisationPrestataire } from '../services/localisationPrestataire';
 import { couleurs } from '../theme/colors';
@@ -52,15 +52,17 @@ export default function DeclarerStructureScreen({ navigation }: any) {
   }
 
   return (
-    <View style={styles.conteneur}>
-      <Text style={styles.titre}>Déclarer ma structure</Text>
-      <TextInput style={styles.champ} placeholder="Nom de la structure (ex: Atelier Jean)" value={nomStructure} onChangeText={setNomStructure} />
-      <TextInput style={styles.champ} placeholder="Quartier" value={quartier} onChangeText={setQuartier} />
-      <TextInput style={styles.champ} placeholder="Description de l'adresse" value={adresseTexte} onChangeText={setAdresseTexte} multiline />
-      <TouchableOpacity style={stylesPartages.boutonPrincipal} onPress={handleContinuer}>
-        <Text style={stylesPartages.boutonPrincipalTexte}>Continuer vers la carte</Text>
-      </TouchableOpacity>
-    </View>
+    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView contentContainerStyle={{ padding: espacements.md, paddingTop: espacements.xl }} keyboardShouldPersistTaps="handled">
+        <Text style={styles.titre}>Déclarer ma structure</Text>
+        <TextInput style={styles.champ} placeholder="Nom de la structure (ex: Atelier Jean)" placeholderTextColor={couleurs.neutre} value={nomStructure} onChangeText={setNomStructure} />
+        <TextInput style={styles.champ} placeholder="Quartier" placeholderTextColor={couleurs.neutre} value={quartier} onChangeText={setQuartier} />
+        <TextInput style={styles.champ} placeholder="Description de l'adresse" placeholderTextColor={couleurs.neutre} value={adresseTexte} onChangeText={setAdresseTexte} multiline />
+        <TouchableOpacity style={stylesPartages.boutonPrincipal} onPress={handleContinuer}>
+          <Text style={stylesPartages.boutonPrincipalTexte}>Continuer vers la carte</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

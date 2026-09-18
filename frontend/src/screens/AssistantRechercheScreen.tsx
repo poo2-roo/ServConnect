@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { demanderAssistant } from '../services/recherche';
 import { couleurs } from '../theme/colors';
@@ -29,7 +29,7 @@ export default function AssistantRechercheScreen({ navigation }: any) {
   }
 
   return (
-    <View style={styles.conteneur}>
+    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
       <View style={styles.entete}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={couleurs.tertiaire} />
@@ -38,7 +38,7 @@ export default function AssistantRechercheScreen({ navigation }: any) {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: espacements.md }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: espacements.md }} keyboardShouldPersistTaps="handled">
         <Text style={styles.intro}>Décrivez votre besoin (ex: "j'ai un robinet qui fuit") et je vous oriente vers la bonne catégorie.</Text>
 
         {chargement && <ActivityIndicator style={{ marginTop: espacements.md }} color={couleurs.bleuBase} />}
@@ -67,7 +67,7 @@ export default function AssistantRechercheScreen({ navigation }: any) {
           <Ionicons name="send" size={18} color={couleurs.blanc} />
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

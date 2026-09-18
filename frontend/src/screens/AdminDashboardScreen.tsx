@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Alert, ScrollView, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import {
   recupererPrestatairesEnAttente, validerKYC,
@@ -16,6 +17,7 @@ import { couleurs } from '../theme/colors';
 import { rayons, espacements } from '../theme/styles';
 
 export default function AdminDashboardScreen() {
+  const navigation = useNavigation<any>();
   const { deconnexion } = useAuth();
   const [enAttente, setEnAttente] = useState<Prestataire[]>([]);
   const [categories, setCategories] = useState<Categorie[]>([]);
@@ -60,7 +62,7 @@ export default function AdminDashboardScreen() {
     try {
       await resoudreLitige(litigeSelectionne.id, {
         type_sanction: typeSanction,
-        duree_jours: typeSanction === 'suspension' ? parseInt(dureeJours) : null,
+        duree_jours: typeSanction === 'suspension' ? parseInt(dureeJours, 10) : null,
         commentaire_resolution: commentaire,
       });
       setLitiges((prev) => prev.filter((l) => l.id !== litigeSelectionne.id));
@@ -105,14 +107,50 @@ export default function AdminDashboardScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* RACCOURCIS DE NAVIGATION VERS D'AUTRES ÉCRANS */}
+      <Text style={styles.titreSection}>Gestion du système</Text>
+      <View style={styles.grilleNavigation}>
+        <TouchableOpacity 
+          style={styles.carteNavigation} 
+          onPress={() => navigation.navigate('AdminUtilisateurs')}
+        >
+          <Ionicons name="people-outline" size={24} color={couleurs.bleuBase} />
+          <Text style={styles.texteNav}>Utilisateurs</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.carteNavigation} 
+          onPress={() => navigation.navigate('AdminLitiges')}
+        >
+          <Ionicons name="warning-outline" size={24} color="#DA1E28" />
+          <Text style={styles.texteNav}>Litiges</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.carteNavigation} 
+          onPress={() => navigation.navigate('AdminKYC')}
+        >
+          <Ionicons name="shield-checkmark-outline" size={24} color="#24A148" />
+          <Text style={styles.texteNav}>Vérifications KYC</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* SECTION LITIGES */}
-      <Text style={styles.titreSection}>Litiges & Signalements ({litiges.length})</Text>
+      <View style={styles.enteteSection}>
+        <Text style={styles.titreSection}>Litiges & Signalements ({litiges.length})</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('AdminLitiges')}>
+          <Text style={styles.lienVoirTout}>Voir tout</Text>
+        </TouchableOpacity>
+      </View>
+
       {litiges.length === 0 ? (
         <Text style={styles.vide}>Aucun litige ouvert.</Text>
       ) : (
         litiges.map((l) => (
           <View key={l.id} style={styles.carte}>
-            <Text style={styles.nomCarte}>Mis en cause : {l.utilisateur_nom} ({l.utilisateur_role})</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('AdminUtilisateurDetail', { utilisateurId: l.utilisateur })}>
+              <Text style={styles.nomCarteLien}>Mis en cause : {l.utilisateur_nom} ({l.utilisateur_role})</Text>
+            </TouchableOpacity>
             <Text style={styles.souscarte}>Motif : {l.motif}</Text>
             <Text style={styles.souscarte}>Signalé par : {l.signale_par_nom || 'Anonyme'}</Text>
             <TouchableOpacity
@@ -126,13 +164,21 @@ export default function AdminDashboardScreen() {
       )}
 
       {/* SECTION KYC */}
-      <Text style={styles.titreSection}>KYC en attente ({enAttente.length})</Text>
+      <View style={styles.enteteSection}>
+        <Text style={styles.titreSection}>KYC en attente ({enAttente.length})</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('AdminKYC')}>
+          <Text style={styles.lienVoirTout}>Voir tout</Text>
+        </TouchableOpacity>
+      </View>
+
       {enAttente.length === 0 ? (
         <Text style={styles.vide}>Aucun dossier en attente.</Text>
       ) : (
         enAttente.map((p) => (
           <View key={p.id} style={styles.carte}>
-            <Text style={styles.nomCarte}>{p.nom_entreprise || p.utilisateur.username}</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('AdminUtilisateurDetail', { utilisateurId: p.utilisateur.id })}>
+              <Text style={styles.nomCarteLien}>{p.nom_entreprise || p.utilisateur.username}</Text>
+            </TouchableOpacity>
             <Text style={styles.souscarte}>{p.utilisateur.telephone}</Text>
             <View style={styles.rangeeBoutons}>
               <TouchableOpacity style={[styles.boutonPetit, { backgroundColor: '#24A148' }]} onPress={() => handleValiderKYC(p.id, 'verifie')}>
@@ -226,9 +272,25 @@ const styles = StyleSheet.create({
   entete: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: espacements.md },
   titre: { fontSize: 22, fontWeight: 'bold', color: couleurs.tertiaire },
   titreSection: { fontWeight: '600', fontSize: 16, color: couleurs.tertiaire, marginTop: espacements.lg, marginBottom: espacements.sm },
+  enteteSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  lienVoirTout: { color: couleurs.bleuBase, fontSize: 13, fontWeight: '600' },
+  
+  grilleNavigation: { flexDirection: 'row', gap: espacements.xs },
+  carteNavigation: {
+    flex: 1,
+    backgroundColor: couleurs.blanc,
+    borderRadius: rayons.moyen,
+    padding: espacements.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 1,
+  },
+  texteNav: { fontSize: 11, fontWeight: '600', color: couleurs.tertiaire, marginTop: 4, textAlign: 'center' },
+
   vide: { color: couleurs.neutre, fontSize: 13 },
   carte: { backgroundColor: couleurs.blanc, borderRadius: rayons.moyen, padding: espacements.sm, marginBottom: espacements.sm },
   nomCarte: { fontWeight: '600', color: couleurs.tertiaire },
+  nomCarteLien: { fontWeight: '600', color: couleurs.bleuBase },
   souscarte: { fontSize: 12, color: couleurs.neutre, marginVertical: 2 },
   rangeeBoutons: { flexDirection: 'row', gap: espacements.xs, marginTop: espacements.xs },
   boutonAction: { paddingVertical: 8, borderRadius: rayons.moyen, alignItems: 'center', marginTop: espacements.xs },
@@ -236,7 +298,7 @@ const styles = StyleSheet.create({
   boutonPetit: { flex: 1, borderRadius: rayons.moyen, paddingVertical: 10, alignItems: 'center' },
   boutonPetitTexte: { color: couleurs.blanc, fontSize: 12, fontWeight: '600' },
   rangeeAjoutCategorie: { flexDirection: 'row', gap: espacements.xs, marginBottom: espacements.sm },
-  champ: { borderWidth: 1, borderColor: couleurs.bordure, borderRadius: rayons.moyen, padding: 10, backgroundColor: couleurs.blanc },
+  champ: { borderWidth: 1, borderColor: couleurs.bordure, borderRadius: rayons.moyen, padding: 10, backgroundColor: couleurs.blanc, flex: 1 },
   boutonAjouter: { backgroundColor: couleurs.bleuBase, borderRadius: rayons.moyen, width: 44, justifyContent: 'center', alignItems: 'center' },
   ligneCategorie: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

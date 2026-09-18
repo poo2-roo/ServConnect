@@ -187,6 +187,9 @@ class ConnexionSerializer(TokenObtainPairSerializer):
         if utilisateur is None or not check_password(password, utilisateur.password):
             raise serializers.ValidationError({'detail': 'Email, téléphone ou mot de passe incorrect.'})
 
+        if not utilisateur.is_active:
+            raise serializers.ValidationError({'detail': 'Votre compte a été désactivé.'})
+
         # 3. Vérification du blocage définitif
         if utilisateur.est_bloque:
             raise serializers.ValidationError({

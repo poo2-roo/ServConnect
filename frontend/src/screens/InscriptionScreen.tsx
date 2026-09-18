@@ -90,7 +90,7 @@ export default function InscriptionScreen({ onRetourConnexion }: { onRetourConne
   }
 
   return (
-    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
 
         <Text style={styles.titre}>Créer un compte</Text>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { modifierService } from '../services/servicesPrestataire';
 import { couleurs } from '../theme/colors';
@@ -29,7 +29,8 @@ export default function ModifierServiceScreen({ route, navigation }: any) {
   }
 
   return (
-    <ScrollView style={styles.conteneur} contentContainerStyle={{ padding: espacements.md, paddingTop: espacements.xl }}>
+    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: espacements.md, paddingTop: espacements.xl }} keyboardShouldPersistTaps="handled">
       <View style={styles.entete}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={couleurs.tertiaire} />
@@ -50,7 +51,8 @@ export default function ModifierServiceScreen({ route, navigation }: any) {
       <TouchableOpacity style={stylesPartages.boutonPrincipal} onPress={handleEnregistrer} disabled={enregistrement}>
         {enregistrement ? <ActivityIndicator color={couleurs.blanc} /> : <Text style={stylesPartages.boutonPrincipalTexte}>Enregistrer</Text>}
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

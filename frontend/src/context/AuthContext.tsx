@@ -50,10 +50,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUtilisateur(profil.data);
     } catch (erreur: any) {
       const donnees = erreur?.response?.data;
+      const rawDetail = donnees?.non_field_errors?.[0] || donnees?.detail;
       const messageErreur =
-        donnees?.non_field_errors?.[0] || donnees?.detail ||
+        (Array.isArray(rawDetail) ? rawDetail[0] : rawDetail) ||
         (typeof donnees === 'string' ? donnees : null);
       const err: any = new Error(messageErreur || 'Connexion impossible.');
+      err.response = erreur?.response;
+      err.data = donnees;
       err.messageServeur = messageErreur;
       throw err;
     }

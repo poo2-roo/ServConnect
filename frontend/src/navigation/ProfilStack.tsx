@@ -9,6 +9,14 @@ import ModifierStructureScreen from '../screens/ModifierStructureScreen';
 import MesServicesScreen from '../screens/MesServicesScreen';
 import ModifierServiceScreen from '../screens/ModifierServiceScreen';
 import CreerServiceScreen from '../screens/CreerServiceScreen';
+import MesMessagesAdminScreen from '../screens/MesMessagesAdminScreen';
+import AdminConversationScreen from '../screens/AdminConversationScreen';
+
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import AdminUtilisateursScreen from '../screens/AdminUtilisateursScreen';
+import AdminLitigesScreen from '../screens/AdminLitigesScreen';
+import AdminKYCScreen from '../screens/AdminKYCScreen';
+import AdminUtilisateurDetailScreen from '../screens/AdminUtilisateurDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +31,15 @@ export default function ProfilStack() {
       <Stack.Screen name="MesServices" component={MesServicesScreen} />
       <Stack.Screen name="ModifierService" component={ModifierServiceScreen} />
       <Stack.Screen name="CreerService" component={CreerServiceScreen} />
+      <Stack.Screen name="MesMessagesAdmin" component={MesMessagesAdminScreen} />     
+      <Stack.Screen name="AdminConversationDepuisProfil" component={AdminConversationScreen} />
+
+
+      <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+      <Stack.Screen name="AdminUtilisateurs" component={AdminUtilisateursScreen} />
+      <Stack.Screen name="AdminLitiges" component={AdminLitigesScreen} />
+      <Stack.Screen name="AdminKYC" component={AdminKYCScreen} />
+      <Stack.Screen name="AdminUtilisateurDetail" component={AdminUtilisateurDetailScreen} />
     </Stack.Navigator>
   );
 }

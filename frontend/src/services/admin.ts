@@ -1,7 +1,21 @@
 import api from './api';
-import { Prestataire, Categorie, Litige } from '../types';
+import { Prestataire, Categorie } from '../types';
 
-// --- Prestataires et KYC ---
+export interface Litige {
+  id: number;
+  utilisateur: number;
+  utilisateur_nom: string;
+  utilisateur_role: string;
+  signale_par: number | null;
+  signale_par_nom: string | null;
+  motif: string;
+  statut: 'ouvert' | 'resolu';
+  type_sanction: string;
+  duree_jours: number | null;
+  commentaire_resolution: string;
+  date_creation: string;
+  date_resolution: string | null;
+}
 
 export async function recupererPrestatairesEnAttente(): Promise<Prestataire[]> {
   const r = await api.get<{ results?: Prestataire[] } | Prestataire[]>('/api/accounts/admin/prestataires-en-attente/');
@@ -11,8 +25,6 @@ export async function recupererPrestatairesEnAttente(): Promise<Prestataire[]> {
 export async function validerKYC(prestataireId: number, decision: 'verifie' | 'rejete', commentaire = ''): Promise<void> {
   await api.post(`/api/accounts/admin/prestataires/${prestataireId}/valider-kyc/`, { decision, commentaire });
 }
-
-// --- Catégories et Contenus ---
 
 export async function creerCategorie(nom: string, description = ''): Promise<Categorie> {
   const r = await api.post<Categorie>('/api/services/admin/categories/', { nom, description });
@@ -31,8 +43,6 @@ export async function supprimerAvisAdmin(id: number): Promise<void> {
   await api.delete(`/api/reviews/admin/${id}/`);
 }
 
-// --- Utilisateurs et Sanctions ---
-
 export async function basculerActivationCompte(utilisateurId: number): Promise<{ id: number; is_active: boolean }> {
   const r = await api.post(`/api/accounts/admin/utilisateurs/${utilisateurId}/basculer-activation/`);
   return r.data;
@@ -48,13 +58,6 @@ export async function recupererUtilisateurAdmin(id: number) {
   return r.data;
 }
 
-export async function sanctionnerUtilisateur(
-  utilisateurId: number,
-  payload: { type_sanction: 'suspension' | 'blocage'; duree_jours?: number | null; motif?: string }
-): Promise<void> {
-  await api.post(`/api/accounts/admin/utilisateurs/${utilisateurId}/sanctionner/`, payload);
-}
-
 export async function leverSanction(utilisateurId: number): Promise<void> {
   await api.post(`/api/accounts/admin/utilisateurs/${utilisateurId}/lever-sanction/`);
 }
@@ -63,8 +66,6 @@ export async function demarrerConversationAdmin(utilisateurId: number) {
   const r = await api.post('/api/messaging/admin-conversations/', { utilisateur: utilisateurId });
   return r.data;
 }
-
-// --- Litiges ---
 
 export async function creerLitige(donnees: { utilisateurCibleId: number; motif: string }): Promise<Litige> {
   const r = await api.post<Litige>('/api/accounts/litiges/', {
@@ -85,4 +86,11 @@ export async function resoudreLitige(
 ): Promise<Litige> {
   const r = await api.post<Litige>(`/api/accounts/admin/litiges/${id}/resoudre/`, payload);
   return r.data;
+}
+
+export async function sanctionnerUtilisateur(
+  utilisateurId: number,
+  payload: { type_sanction: 'suspension' | 'blocage'; duree_jours?: number | null; motif?: string }
+): Promise<void> {
+  await api.post(`/api/accounts/admin/utilisateurs/${utilisateurId}/sanctionner/`, payload);
 }

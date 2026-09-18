@@ -8,6 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { creerLitige } from '../services/admin';
 import { couleurs } from '../theme/colors';
@@ -80,7 +82,10 @@ export const CreerLitigeModal: React.FC<CreerLitigeModalProps> = ({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={styles.modalContainer}>
           <Text style={styles.title}>Signaler un problème</Text>
 
@@ -125,7 +130,7 @@ export const CreerLitigeModal: React.FC<CreerLitigeModalProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

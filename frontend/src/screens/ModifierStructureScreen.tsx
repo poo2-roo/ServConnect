@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import LocalisationScreen from './LocalisationScreen';
 import { modifierInfosStructure, modifierPositionStructure } from '../services/localisationPrestataire';
@@ -57,27 +57,29 @@ export default function ModifierStructureScreen({ route, navigation }: any) {
   }
 
   return (
-    <View style={styles.conteneur}>
-      <View style={styles.entete}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={couleurs.tertiaire} />
+    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: espacements.md, paddingTop: espacements.xl }} keyboardShouldPersistTaps="handled">
+        <View style={styles.entete}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={couleurs.tertiaire} />
+          </TouchableOpacity>
+          <Text style={styles.titre}>Modifier la structure</Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        <TextInput style={styles.champ} placeholder="Nom de la structure" placeholderTextColor={couleurs.neutre} value={nomStructure} onChangeText={setNomStructure} />
+        <TextInput style={styles.champ} placeholder="Quartier" placeholderTextColor={couleurs.neutre} value={quartier} onChangeText={setQuartier} />
+        <TextInput style={[styles.champ, { height: 80 }]} placeholder="Description de l'adresse" placeholderTextColor={couleurs.neutre} value={adresseTexte} onChangeText={setAdresseTexte} multiline />
+
+        <TouchableOpacity style={stylesPartages.boutonPrincipal} onPress={handleSauvegarderInfos} disabled={enregistrement}>
+          {enregistrement ? <ActivityIndicator color={couleurs.blanc} /> : <Text style={stylesPartages.boutonPrincipalTexte}>Enregistrer les informations</Text>}
         </TouchableOpacity>
-        <Text style={styles.titre}>Modifier la structure</Text>
-        <View style={{ width: 24 }} />
-      </View>
 
-      <TextInput style={styles.champ} placeholder="Nom de la structure" value={nomStructure} onChangeText={setNomStructure} />
-      <TextInput style={styles.champ} placeholder="Quartier" value={quartier} onChangeText={setQuartier} />
-      <TextInput style={[styles.champ, { height: 80 }]} placeholder="Description de l'adresse" value={adresseTexte} onChangeText={setAdresseTexte} multiline />
-
-      <TouchableOpacity style={stylesPartages.boutonPrincipal} onPress={handleSauvegarderInfos} disabled={enregistrement}>
-        {enregistrement ? <ActivityIndicator color={couleurs.blanc} /> : <Text style={stylesPartages.boutonPrincipalTexte}>Enregistrer les informations</Text>}
-      </TouchableOpacity>
-
-      <TouchableOpacity style={[stylesPartages.boutonContour, { marginTop: espacements.sm }]} onPress={() => setEtape('carte')}>
-        <Text style={stylesPartages.boutonContourTexte}>Modifier la position sur la carte</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity style={[stylesPartages.boutonContour, { marginTop: espacements.sm }]} onPress={() => setEtape('carte')}>
+          <Text style={stylesPartages.boutonContourTexte}>Modifier la position sur la carte</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

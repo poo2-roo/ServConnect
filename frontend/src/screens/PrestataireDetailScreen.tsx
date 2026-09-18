@@ -203,7 +203,7 @@ export default function PrestataireDetailScreen({ route, navigation }: any) {
       {/* Rangée d'actions : Message + Signalement */}
       <View style={styles.rangeeActions}>
         <TouchableOpacity
-          style={[stylesPartages.boutonPrincipal, { flex: 1, height: 44 }]}
+          style={[stylesPartages.boutonPrincipal, { flex: 1, height: 50 }]}
           onPress={handleEnvoyerMessage}
           disabled={creationConversation}
         >

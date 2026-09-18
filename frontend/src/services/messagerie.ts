@@ -29,3 +29,13 @@ export async function recupererSuggestions(conversationId: number): Promise<Sugg
   );
   return reponse.data.suggestions;
 }
+
+export async function recupererMessagesAdmin(conversationId: number) {
+  const r = await api.get(`/api/messaging/admin-conversations/${conversationId}/messages/`);
+  return Array.isArray(r.data) ? r.data : r.data.results || [];
+}
+
+export async function envoyerMessageAdmin(conversationId: number, contenu: string) {
+  const r = await api.post(`/api/messaging/admin-conversations/${conversationId}/messages/`, { contenu });
+  return r.data;
+}

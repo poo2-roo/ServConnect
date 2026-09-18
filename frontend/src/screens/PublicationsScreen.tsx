@@ -90,7 +90,7 @@ export default function PublicationsScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.conteneur} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.titre}>Créer une publication</Text>
 

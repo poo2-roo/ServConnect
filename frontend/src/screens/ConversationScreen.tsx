@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   texteAutre: { color: couleurs.tertiaire, fontSize: 14 },
 
   zoneSaisie: {
-    flexDirection: 'row', alignItems: 'flex-end', padding: espacements.sm,
+    flexDirection: 'row', alignItems: 'flex-end', padding: espacements.sm, paddingBottom: espacements.md,
     backgroundColor: couleurs.blanc, borderTopWidth: 1, borderTopColor: couleurs.bordure, gap: espacements.xs,
   },
   champ: {
