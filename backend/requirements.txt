@@ -29,7 +29,6 @@ tzdata==2026.3
 urllib3==2.7.0
 vosk==0.3.45
 websockets>=11.0,<16.0
-
 yarl==1.24.2
 yt-dlp==2026.7.4
 python-decouple>=3.8
@@ -45,3 +44,4 @@ google-generativeai>=0.4.0
 django-supabase-storage>=0.1.0
 dj-database-url>=2.1.0
 supabase>=2.18.0,<3.0.0
+gTTS>=2.3.0
