@@ -8,6 +8,7 @@ de prestataires de services (Cameroun) — Tech Temple / IAI-Cameroun.
 from pathlib import Path
 from datetime import timedelta
 from decouple import config, Csv
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -84,16 +85,27 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # --------------------------------------------------------------------------
 # Base de données — PostgreSQL + PostGIS (conteneur Docker)
 # --------------------------------------------------------------------------
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': config('DB_NAME', default='servconnect'),
-        'USER': config('DB_USER', default='servconnect_user'),
-        'PASSWORD': config('DB_PASSWORD', default='servconnect_pass'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+DATABASE_URL = config('DATABASE_URL', default=config('POSTGRES_URL', default=''))
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            engine='django.contrib.gis.db.backends.postgis',
+            conn_max_age=600,
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            'NAME': config('DB_NAME', default='servconnect'),
+            'USER': config('DB_USER', default='servconnect_user'),
+            'PASSWORD': config('DB_PASSWORD', default='servconnect_pass'),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
+        }
+    }
+
 
 # --------------------------------------------------------------------------
 # Utilisateur personnalisé
