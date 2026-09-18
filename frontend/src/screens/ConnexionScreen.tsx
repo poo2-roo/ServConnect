@@ -23,7 +23,7 @@ export default function ConnexionScreen({ onAllerInscription }: { onAllerInscrip
     return valeur ? String(valeur) : '';
   };
 
-async function handleConnexion() {
+  async function handleConnexion() {
     if (!identifier || !password) {
       Alert.alert('Champs manquants', 'Merci de remplir votre email ou votre téléphone, ainsi que votre mot de passe.');
       return;
@@ -31,7 +31,7 @@ async function handleConnexion() {
     setChargement(true);
     try {
       await connexion(identifier, password);
-} catch (erreur: any) {
+    } catch (erreur: any) {
       // Axios place la réponse JSON dans erreur.response.data
       const data = erreur?.response?.data || erreur?.data || {};
 
@@ -78,7 +78,7 @@ async function handleConnexion() {
 
         <View style={styles.heroConteneur}>
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1622396636133-ba608305f3ce?w=300&q=80' }}
+            source={require('../../assets/4.png')}
             style={styles.heroImage}
           />
         </View>
@@ -118,22 +118,7 @@ async function handleConnexion() {
           )}
         </TouchableOpacity>
 
-        <View style={styles.separateurLigne}>
-          <View style={styles.trait} />
-          <Text style={styles.separateurTexte}>ou continuer avec</Text>
-          <View style={styles.trait} />
-        </View>
 
-        <View style={styles.rangeeSociale}>
-          <TouchableOpacity style={styles.boutonSocial}>
-            <Ionicons name="logo-google" size={20} color={couleurs.tertiaire} />
-            <Text style={styles.boutonSocialTexte}>Google</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.boutonSocial}>
-            <Ionicons name="logo-apple" size={20} color={couleurs.tertiaire} />
-            <Text style={styles.boutonSocialTexte}>Apple</Text>
-          </TouchableOpacity>
-        </View>
 
         <TouchableOpacity style={styles.piedDePage} onPress={onAllerInscription}>
           <Text style={styles.piedDePageTexte}>
@@ -168,7 +153,7 @@ const styles = StyleSheet.create({
 
   champ: {
     width: '100%', borderWidth: 1, borderColor: couleurs.bordure, borderRadius: rayons.moyen,
-    padding: 14, marginBottom: espacements.sm, fontSize: 15, backgroundColor: couleurs.fond,
+    padding: 14, marginBottom: espacements.sm, fontSize: 15, backgroundColor: couleurs.fond, color: '#000000',
   },
 
   bouton: {
