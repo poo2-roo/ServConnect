@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   rangeeTypes: { flexDirection: 'row', gap: espacements.xs, marginBottom: espacements.md },
 
   zoneImage: {
-    width: '100%', height: 180, borderRadius: rayons.grand, overflow: 'hidden',
+    width: '100%', aspectRatio: 4 / 5, borderRadius: rayons.grand, overflow: 'hidden',
     backgroundColor: couleurs.blanc, borderWidth: 1, borderColor: couleurs.bordure,
     marginBottom: espacements.sm,
   },
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   label: { fontWeight: '600', color: couleurs.tertiaire, marginTop: espacements.md, marginBottom: espacements.xs },
   zoneTexte: {
     backgroundColor: couleurs.blanc, borderRadius: rayons.moyen, borderWidth: 1, borderColor: couleurs.bordure,
-    padding: espacements.sm, fontSize: 14, minHeight: 90, textAlignVertical: 'top', marginBottom: espacements.sm,
+    padding: espacements.sm, fontSize: 14, minHeight: 150, textAlignVertical: 'top', marginBottom: espacements.sm,
   },
 
   boutonPublier: {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform, Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker'; // 👈 1. Import du module
 import { recupererCategories } from '../services/annuaire';
 import { creerService, optimiserPrixService } from '../services/servicesPrestataire';
 import { Categorie } from '../types';
@@ -16,6 +17,7 @@ export default function CreerServiceScreen({ navigation }: any) {
   const [titre, setTitre] = useState('');
   const [description, setDescription] = useState('');
   const [prixMin, setPrixMin] = useState('');
+  const [imageUri, setImageUri] = useState<string | null>(null); // 👈 2. État pour l'image
   const [chargementPublication, setChargementPublication] = useState(false);
   const [chargementOptimisation, setChargementOptimisation] = useState(false);
   const [suggestionPrix, setSuggestionPrix] = useState<any>(null);
@@ -25,6 +27,26 @@ export default function CreerServiceScreen({ navigation }: any) {
     recupererCategories().then(setCategories);
   }, []);
 
+  // 👈 3. Fonction pour ouvrir la galerie
+  async function choisirImage() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission refusée', 'Accès à la galerie requis pour ajouter une image.');
+      return;
+    }
+
+    const resultat = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!resultat.canceled) {
+      setImageUri(resultat.assets[0].uri);
+    }
+  }
+
   async function handleCreerService() {
     if (!categorieId || !titre.trim() || !prixMin.trim()) {
       Alert.alert('Champs manquants', 'Merci de remplir la catégorie, le titre et le prix.');
@@ -32,8 +54,13 @@ export default function CreerServiceScreen({ navigation }: any) {
     }
     setChargementPublication(true);
     try {
+      // Note: Vous pouvez envoyer imageUri via FormData si le backend accepte les fichiers
       const service = await creerService({
-        categorie: categorieId, titre, description, prix_min: parseInt(prixMin, 10),
+        categorie: categorieId,
+        titre,
+        description,
+        prix_min: parseInt(prixMin, 10),
+        image: imageUri,
       });
       setServiceCreeId(service.id);
       Alert.alert('Service publié !', 'Vous pouvez maintenant demander une suggestion de prix IA.');
@@ -84,9 +111,42 @@ export default function CreerServiceScreen({ navigation }: any) {
           ))}
         </View>
 
-        <TextInput style={styles.champ} placeholder="Titre du service" value={titre} onChangeText={setTitre} />
-        <TextInput style={[styles.champ, { height: 80 }]} placeholder="Description" value={description} onChangeText={setDescription} multiline />
-        <TextInput style={styles.champ} placeholder="Prix (FCFA)" value={prixMin} onChangeText={setPrixMin} keyboardType="numeric" />
+        {/* 👈 4. Zone d'aperçu et de sélection d'image */}
+        <Text style={styles.label}>Illustration du service</Text>
+        <TouchableOpacity style={styles.boutonImage} onPress={choisirImage}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.imageApercu} />
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Ionicons name="camera-outline" size={32} color={couleurs.neutre} />
+              <Text style={{ color: couleurs.neutre, fontSize: 13, marginTop: 4 }}>Ajouter une photo</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <TextInput
+          style={styles.champ}
+          placeholder="Titre du service"
+          placeholderTextColor={couleurs.neutre}
+          value={titre}
+          onChangeText={setTitre}
+        />
+        <TextInput
+          style={[styles.champ, { height: 80 }]}
+          placeholder="Description"
+          placeholderTextColor={couleurs.neutre}
+          value={description}
+          onChangeText={setDescription}
+          multiline
+        />
+        <TextInput
+          style={styles.champ}
+          placeholder="Prix (FCFA)"
+          placeholderTextColor={couleurs.neutre}
+          value={prixMin}
+          onChangeText={setPrixMin}
+          keyboardType="numeric"
+        />
 
         {!serviceCreeId ? (
           <TouchableOpacity style={stylesPartages.boutonPrincipal} onPress={handleCreerService} disabled={chargementPublication}>
@@ -134,8 +194,21 @@ const styles = StyleSheet.create({
   rangeeCategories: { flexDirection: 'row', flexWrap: 'wrap', gap: espacements.xs, marginBottom: espacements.md },
   champ: {
     borderWidth: 1, borderColor: couleurs.bordure, borderRadius: rayons.moyen,
-    padding: 12, marginBottom: espacements.sm, fontSize: 14, backgroundColor: couleurs.blanc,
+    padding: 12, marginBottom: espacements.sm, fontSize: 14, backgroundColor: couleurs.blanc, color: couleurs.tertiaire, textAlignVertical: 'top',
   },
+  boutonImage: {
+    height: 140,
+    width: '100%',
+    borderRadius: rayons.moyen,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+    borderStyle: 'dashed',
+    marginBottom: espacements.md,
+    overflow: 'hidden',
+    backgroundColor: couleurs.blanc,
+  },
+  placeholderImage: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  imageApercu: { width: '100%', height: '100%', resizeMode: 'cover' },
   blocSuggestion: { backgroundColor: couleurs.blanc, borderRadius: rayons.moyen, padding: espacements.sm, marginTop: espacements.sm, borderWidth: 1, borderColor: couleurs.secondaire },
   prixSuggere: { fontSize: 22, fontWeight: 'bold', color: couleurs.bleuBase },
   fourchette: { fontSize: 13, color: couleurs.tertiaire, marginBottom: espacements.xs },

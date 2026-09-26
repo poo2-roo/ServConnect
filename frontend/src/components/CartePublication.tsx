@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Publication } from '../types';
@@ -11,9 +11,15 @@ const IMAGE_PLACEHOLDER = 'https://images.unsplash.com/photo-1581578731548-c6469
 export default function CartePublication({ publication, onPress }: { publication: Publication; onPress: () => void }) {
   const [aime, setAime] = useState(publication.jaime_deja);
   const [nombreLikes, setNombreLikes] = useState(publication.nombre_likes);
+  const [aspectRatio, setAspectRatio] = useState(1); // Ratio 1:1 par défaut (carré)
+
+  const imageUrl = publication.image || IMAGE_PLACEHOLDER;
+
+  // Récupération des proportions réelles de l'image
+
 
   async function handleLike() {
-    // Mise a jour optimiste : on change l'affichage immediatement, sans attendre le serveur
+    // Mise à jour optimiste
     setAime(!aime);
     setNombreLikes(nombreLikes + (aime ? -1 : 1));
     try {
@@ -21,7 +27,7 @@ export default function CartePublication({ publication, onPress }: { publication
       setAime(resultat.aime);
       setNombreLikes(resultat.nombre_likes);
     } catch {
-      // en cas d'echec, on annule le changement optimiste
+      // En cas d'échec, on annule la mise à jour
       setAime(aime);
       setNombreLikes(nombreLikes);
     }
@@ -35,14 +41,17 @@ export default function CartePublication({ publication, onPress }: { publication
         <Image
           source={{ uri: publication.prestataire_avatar || IMAGE_PLACEHOLDER }}
           style={styles.avatar}
+          resizeMode="cover"
         />
         <Text style={styles.nomPrestataire}>{publication.prestataire_nom || 'Prestataire'}</Text>
       </View>
 
       <View style={styles.imageConteneur}>
         <Image
-          source={{ uri: publication.image || IMAGE_PLACEHOLDER }}
-          style={styles.image}
+          source={{ uri: imageUrl }}
+          style={[styles.image]} // Application du ratio exact de l'image
+          resizeMode="cover"
+          
         />
         {note > 0 && (
           <View style={stylesPartages.badgeNote}>
@@ -78,7 +87,12 @@ const styles = StyleSheet.create({
   nomPrestataire: { fontWeight: '600', color: couleurs.tertiaire, fontSize: 14 },
 
   imageConteneur: { position: 'relative', marginBottom: espacements.sm },
-  image: { width: '100%', height: 180, borderRadius: rayons.moyen, backgroundColor: couleurs.bordure },
+  image: {
+    width: '100%',
+    borderRadius: rayons.moyen,
+    aspectRatio: 4/6,
+    backgroundColor: couleurs.bordure,
+  },
 
   rangeeActions: { flexDirection: 'row', gap: espacements.md, marginBottom: espacements.xs },
   action: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -87,8 +101,10 @@ const styles = StyleSheet.create({
   contenu: { fontSize: 13, color: couleurs.tertiaire, lineHeight: 18, marginBottom: espacements.sm },
 
   boutonProfil: {
-    backgroundColor: couleurs.bleuBase, borderRadius: rayons.moyen,
-    paddingVertical: 10, alignItems: 'center',
+    backgroundColor: couleurs.bleuBase,
+    borderRadius: rayons.moyen,
+    paddingVertical: 10,
+    alignItems: 'center',
   },
   boutonProfilTexte: { color: couleurs.blanc, fontWeight: '600', fontSize: 13 },
 });
